@@ -2,6 +2,9 @@
 import select
 import sys
 
+from sklearn.svm import LinearSVC
+import numpy
+
 import rospy
 import actionlib
 
@@ -17,25 +20,18 @@ goal.max_y = 0.5
 goal.min_z = 0.6
 goal.max_z = 2
 client = actionlib.SimpleActionClient('/centroid_detector', DetectCentroidAction)
-demos = []
+states = None
+actions = None
 
 # A model that takes in a state and produces an action
 def model(state):
     return 'h'
 
-# Produces a model from demos
-def learn(demos):
-    for demo in demos:
-        h = 0
-        n = 0
-        if demo[1] == 'h':
-            h += 1
-        else:
-            n += 1
-    if h >= n:
-        return lambda state: 'h'
-    else:
-        return lambda state: 'n'
+# Produces a model from states
+def learn(states, actions):
+    clf = LinearSVC()
+    clf.fit(states, actions)
+    return clf.predict
 
 def detect_centroid():
     # Send a goal to centroid detector
@@ -43,14 +39,30 @@ def detect_centroid():
     client.send_goal(goal)
     client.wait_for_result()
     result = client.get_result()
+    # Convert result to a numpy array
+    result = numpy.array([
+        [
+            result.centroid.position.x,
+            result.centroid.position.y,
+            result.centroid.position.z,
+            result.centroid.orientation.x,
+            result.centroid.orientation.y,
+            result.centroid.orientation.z,
+            result.centroid.orientation.w,
+            result.success
+        ]
+    ])
     return result
 
 def execute():
     state = detect_centroid()
-    print model(state)
+    print 'World state is:\n' + str(state)
+    print 'Resulting action is: ' + model(state)[0]
 
 def main():
     global model
+    global states
+    global actions
     # Initilise the node
     rospy.init_node('lfd')
 
@@ -85,14 +97,19 @@ def main():
             state = 'AskUser'
         elif state == 'Learn':
             print 'Learning'
-            model = learn(demos)
+            model = learn(states, actions)
             state = 'AskUser'
         elif state == 'Demonstrate':
             print 'Demonstrate'
             result = detect_centroid()
             print 'World state is\n' + str(result)
-            user_input = raw_input('What action should be taken; say hi (h) or nop (n):')
-            demos.append((result, user_input))
+            user_input = numpy.array([[raw_input('What action should be taken; say hi (h) or nop (n):')]])
+            if states is not None:
+                states = numpy.append(states, result, axis=0)
+                actions = numpy.append(actions, user_input)
+            else:
+                states = result
+                actions = user_input
             state = 'AskUser'
 
         # Sleep if needed
