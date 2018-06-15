@@ -13,6 +13,16 @@ import py_trees
 from centroid_detector_msgs.msg import DetectCentroidGoal, DetectCentroidAction
 from behavior_manager.interfaces.manipulation_behavior import FullyExtendTorso, ColapseTorso, MoveTorsoBehavior
 
+class SimpleTree:
+    def __init__(self, behav):
+        self.behav = behav
+        self.behav.setup(timeout=30)
+
+    def run_once(self):
+        self.behav.tick_once()
+        while self.behav.status == py_trees.Status.RUNNING:
+            self.behav.tick_once()
+
 # Global vars
 # Construct a goal for the centroid detector
 goal = DetectCentroidGoal()
@@ -25,6 +35,8 @@ goal.max_z = 2
 client = actionlib.SimpleActionClient('/centroid_detector', DetectCentroidAction)
 states = None
 actions = None
+hi = None
+bye = None
 
 # A model that takes in a state and produces an action
 def model(state):
@@ -64,19 +76,16 @@ def execute():
     print 'Resulting action is: ' + action
     act = None
     if action == 'h':
-        act = FullyExtendTorso('hi')
+        hi.run_once()
     else:
-        act = MoveTorsoBehavior('Bye', 0.2)
-
-    act.setup(timeout=30)
-    act.tick_once()
-    while act.status == py_trees.Status.RUNNING:
-        act.tick_once()
+        bye.run_once()
 
 def main():
     global model
     global states
     global actions
+    global hi
+    global bye
     # Initilise the node
     rospy.init_node('lfd')
 
@@ -84,6 +93,10 @@ def main():
     rospy.loginfo('Waiting for centroid detector action server')
     client.wait_for_server()
     rospy.loginfo('Centroid detector action server is running')
+
+    # Define actions
+    hi = SimpleTree(FullyExtendTorso('hi'))
+    bye = SimpleTree(MoveTorsoBehavior('Bye', 0.2))
 
     # State
     state = 'AskUser'
