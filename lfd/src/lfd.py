@@ -8,7 +8,10 @@ import numpy
 import rospy
 import actionlib
 
+import py_trees
+
 from centroid_detector_msgs.msg import DetectCentroidGoal, DetectCentroidAction
+from behavior_manager.interfaces.manipulation_behavior import FullyExtendTorso, ColapseTorso, MoveTorsoBehavior
 
 # Global vars
 # Construct a goal for the centroid detector
@@ -57,7 +60,18 @@ def detect_centroid():
 def execute():
     state = detect_centroid()
     print 'World state is:\n' + str(state)
-    print 'Resulting action is: ' + model(state)[0]
+    action = model(state)[0]
+    print 'Resulting action is: ' + action
+    act = None
+    if action == 'h':
+        act = FullyExtendTorso('hi')
+    else:
+        act = MoveTorsoBehavior('Bye', 0.2)
+
+    act.setup(timeout=30)
+    act.tick_once()
+    while act.status == py_trees.Status.RUNNING:
+        act.tick_once()
 
 def main():
     global model
