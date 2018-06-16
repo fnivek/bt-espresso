@@ -2,6 +2,9 @@
 import select
 import sys
 import itertools
+import thread
+import functools
+import collections
 
 from sklearn.svm import LinearSVC
 import numpy
@@ -9,8 +12,10 @@ import numpy
 import rospy
 import actionlib
 from std_msgs.msg import String
+from sensor_msgs.msg import JointState
 
 import py_trees
+import py_trees_ros
 
 from centroid_detector_msgs.msg import DetectCentroidGoal, DetectCentroidAction
 from behavior_manager.interfaces.manipulation_behavior import FullyExtendTorso, ColapseTorso, MoveTorsoBehavior, PickBehavior, TuckWithCondBehavior, PlaceBehavior
@@ -51,6 +56,8 @@ class LfD:
         self.action_names = {}
         for key, value in self.actions.iteritems():
             self.action_names[key] = str(value)
+        self.last_actions = collections.deque(maxlen=10)
+        [self.last_actions.append(0) for _ in xrange(10)]
 
         # Blackboard setup
         self.blackboard = py_trees.blackboard.Blackboard()
@@ -62,10 +69,48 @@ class LfD:
         self.blackboard.set('detect_centroid/max_z', 0.9)
         self.blackboard.set('shelf', String('shelf2'))
         print 'Run a bunch of actions to init blackboard cause I am lazy'
-        self.actions[3].run_once()
-        self.actions[0].run_once()
-        self.actions[4].run_once()
+        self.run_action(3)
+        self.run_action(0)
+        self.run_action(4)
         print 'State:', self.blackboard
+
+        # Build a perception tree
+        # self.build_perception_tree()
+
+    def run_action(self, action_id):
+        self.actions[action_id].run_once()
+        self.last_actions.append(action_id)
+
+    def build_perception_tree(self):
+        # Define behaviors
+        root = py_trees.composites.Parallel('perception_root')
+        get_joint_states = py_trees_ros.subscribers.ToBlackboard('get_joint_states',
+            '/joint_states',
+            JointState,
+            {'joint_states': None},
+            clearing_policy=py_trees.common.ClearingPolicy.NEVER
+        )
+        detect_centroid = CentroidDetectorBehavior('detect_centroid')
+
+        # Define structure of tree
+        root.add_children([
+            get_joint_states,
+            detect_centroid
+        ])
+
+        # Wrap tree in ros tree
+        self.perception_tree = py_trees_ros.trees.BehaviourTree(root)
+
+        # Add a interupt hook and setup
+        rospy.on_shutdown(functools.partial(self.shutdown_perception_tree, self.perception_tree))
+        self.perception_tree.setup(30)
+
+        # Start a thread for the tree
+        thread.start_new_thread(self.perception_tree.tick_tock, (10,))
+
+    def shutdown_perception_tree(self, tree):
+        """Stop the tree."""
+        tree.interrupt()
 
     # A model that takes in a state and produces an action
     def model(self, state):
@@ -79,12 +124,15 @@ class LfD:
 
     def execute(self):
         state = self.get_state()
-        print 'World state is:\n' + str(self.blackboard)
+        print 'World state is:\n' + str(state)
         action_id = self.model(state)[0]
         print 'Resulting action is: ' + self.action_names[action_id]
-        self.actions[action_id].run_once()
+        self.run_action(action_id)
 
     def get_state(self):
+        # WARNING: Not thread safe!!!!
+        #   Blackboard access is being made in the perception tree thread
+        # TODO(Kevin): Figure out how to ensure I get the correct joint states
         return numpy.array([[
             self.blackboard.centroid.centroid.position.x,
             self.blackboard.centroid.centroid.position.y,
@@ -93,8 +141,12 @@ class LfD:
             self.blackboard.centroid.centroid.orientation.y,
             self.blackboard.centroid.centroid.orientation.z,
             self.blackboard.centroid.centroid.orientation.w,
-            self.blackboard.centroid.success
-        ]])
+            self.blackboard.centroid.success,
+        ] # + list(self.blackboard.joint_states.position)
+          # + list(self.blackboard.joint_states.velocity)
+          # + list(self.blackboard.joint_states.effort)
+          + list(self.last_actions)
+        ])
 
     def run(self):
         # State
@@ -123,13 +175,13 @@ class LfD:
             elif state == 'Demonstrate':
                 print 'Demonstrate'
                 world_state = self.get_state()
-                print 'World state is\n' + str(self.blackboard)
+                print 'World state is\n' + str(world_state)
                 user_input = numpy.array([[int(
                     raw_input('What action should be taken ' + str(self.action_names) + ': ')
                 )]])
 
                 # Perform action
-                self.actions[user_input[0,0]].run_once()
+                self.run_action(user_input[0,0])
 
                 # Save the state action combo
                 if self.demo_states is not None:
@@ -149,7 +201,7 @@ class LfD:
                 print 'In RC mode select an action to perform or type anything else to exit'
                 user_input = raw_input('What action should be taken ' + str(self.action_names) + ': ')
                 try:
-                    self.actions[int(user_input)].run_once()
+                    self.run_action(int(user_input))
                 except Exception as e:
                     state = 'AskUser'
 
