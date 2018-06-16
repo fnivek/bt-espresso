@@ -6,7 +6,10 @@ import thread
 import functools
 import collections
 
+import graphviz
+
 from sklearn.svm import LinearSVC
+from sklearn import tree
 import numpy
 
 import rospy
@@ -56,8 +59,10 @@ class LfD:
         self.action_names = {}
         for key, value in self.actions.iteritems():
             self.action_names[key] = str(value)
-        self.last_actions = collections.deque(maxlen=10)
-        [self.last_actions.append(0) for _ in xrange(10)]
+        num_actions = 1
+        self.last_actions = collections.deque(maxlen=num_actions)
+        for _ in xrange(num_actions):
+            self.last_actions.append(0)
 
         # Blackboard setup
         self.blackboard = py_trees.blackboard.Blackboard()
@@ -73,6 +78,12 @@ class LfD:
         self.run_action(0)
         self.run_action(4)
         print 'State:', self.blackboard
+        print 'Actions:\n\t', self.action_names.values()
+
+        # Features setup
+        self.feature_names = (['Cx', 'Cy', 'Cz', 'Csuccess']
+            + ['LA' + str(num_actions - i) for i in xrange(self.last_actions.maxlen)])
+        print 'Features:\n\t', self.feature_names
 
         # Build a perception tree
         # self.build_perception_tree()
@@ -118,13 +129,22 @@ class LfD:
 
     # Produces a model from states
     def learn(self, states, actions):
-        clf = LinearSVC()
+        clf = tree.DecisionTreeClassifier()
         clf.fit(states, actions)
+        dot_data = tree.export_graphviz(
+            clf,
+            out_file='data/tree',
+            feature_names=self.feature_names,
+            class_names=[self.action_names[action_id] for action_id in clf.classes_])
+        graph = graphviz.Source(dot_data)
+        graph.render('tree')
+        self.clf = clf
         return clf.predict
 
     def execute(self):
         state = self.get_state()
         print 'World state is:\n' + str(state)
+        print 'Path through tree:\n', self.clf.decision_path(state)
         action_id = self.model(state)[0]
         print 'Resulting action is: ' + self.action_names[action_id]
         self.run_action(action_id)
@@ -137,16 +157,13 @@ class LfD:
             self.blackboard.centroid.centroid.position.x,
             self.blackboard.centroid.centroid.position.y,
             self.blackboard.centroid.centroid.position.z,
-            self.blackboard.centroid.centroid.orientation.x,
-            self.blackboard.centroid.centroid.orientation.y,
-            self.blackboard.centroid.centroid.orientation.z,
-            self.blackboard.centroid.centroid.orientation.w,
             self.blackboard.centroid.success,
         ] # + list(self.blackboard.joint_states.position)
           # + list(self.blackboard.joint_states.velocity)
           # + list(self.blackboard.joint_states.effort)
           + list(self.last_actions)
         ])
+        # return numpy.array([list(self.last_actions)])
 
     def run(self):
         # State
