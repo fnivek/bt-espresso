@@ -2,7 +2,7 @@
 # Project specific
 #######################################
 nvidia-docker-compose.yml
-data/
+media/
 
 #######################################
 # C++
