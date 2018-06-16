@@ -1,0 +1,10 @@
+<launch>
+  <include file="$(find manipulation)/launch/manipulation.launch"/>
+  <include file="$(find centroid_detector)/launch/centroid_detector.launch" />
+
+  <!-- Behavior tree gui -->
+  <!-- node name="rqt_py_trees" pkg="rqt_py_trees" type="rqt_py_trees"/ -->
+
+  <!-- lfd -->
+  <node name="lfd" pkg="lfd" type="lfd.py" output="screen"/>
+</launch>
