@@ -133,11 +133,13 @@ class LfD:
         clf.fit(states, actions)
         dot_data = tree.export_graphviz(
             clf,
-            out_file='data/tree',
+            out_file=None,
+            filled=True,
             feature_names=self.feature_names,
-            class_names=[self.action_names[action_id] for action_id in clf.classes_])
+            class_names=[self.action_names[action_id] for action_id in clf.classes_],
+            impurity=False)
         graph = graphviz.Source(dot_data)
-        graph.render('tree')
+        graph.render('media/tree')
         self.clf = clf
         return clf.predict
 
