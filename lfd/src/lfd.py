@@ -195,9 +195,14 @@ class LfD:
                 print 'Demonstrate'
                 world_state = self.get_state()
                 print 'World state is\n' + str(world_state)
-                user_input = numpy.array([[int(
-                    raw_input('What action should be taken ' + str(self.action_names) + ': ')
-                )]])
+                try:
+                    user_input = numpy.array([[int(
+                        raw_input('What action should be taken ' + str(self.action_names) + ': ')
+                    )]])
+                except Exception as e:
+                    print 'Error:', e
+                    state = 'AskUser'
+                    continue
 
                 # Perform action
                 self.run_action(user_input[0,0])
