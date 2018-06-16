@@ -5,6 +5,7 @@ import itertools
 import thread
 import functools
 import collections
+import pickle
 
 import graphviz
 
@@ -46,6 +47,10 @@ class LfD:
         # Demonstrations
         self.demo_states = None
         self.demo_actions = None
+
+        # Model
+        self.clf = tree.DecisionTreeClassifier()
+        self.model_file = 'media/model.sav'
 
         # Actions
         self.actions = {
@@ -127,27 +132,28 @@ class LfD:
     def model(self, state):
         return 0
 
-    # Produces a model from states
-    def learn(self, states, actions):
-        clf = tree.DecisionTreeClassifier()
-        clf.fit(states, actions)
+    def render_model(self):
         dot_data = tree.export_graphviz(
-            clf,
+            self.clf,
             out_file=None,
             filled=True,
             feature_names=self.feature_names,
-            class_names=[self.action_names[action_id] for action_id in clf.classes_],
+            class_names=[self.action_names[action_id] for action_id in self.clf.classes_],
             impurity=False)
         graph = graphviz.Source(dot_data)
         graph.render('media/tree')
-        self.clf = clf
-        return clf.predict
+
+    # Produces a model from states
+    def learn(self, states, actions):
+        self.clf = tree.DecisionTreeClassifier()
+        self.clf.fit(states, actions)
+        self.render_model()
 
     def execute(self):
         state = self.get_state()
         print 'World state is:\n' + str(state)
         print 'Path through tree:\n', self.clf.decision_path(state)
-        action_id = self.model(state)[0]
+        action_id = self.clf.predict(state)[0]
         print 'Resulting action is: ' + self.action_names[action_id]
         self.run_action(action_id)
 
@@ -175,7 +181,7 @@ class LfD:
         sleep_rate = rospy.Rate(10)
         while not rospy.is_shutdown():
             if state == 'AskUser':
-                print 'Demonstrate(d), learn(l), execute(e), rc(r):'
+                print 'Demonstrate(d), learn(l), execute(e), rc(r), Load model(lm), Write model(w):'
                 state = 'WaitForUser'
             elif state == 'WaitForUser':
                 if select.select([sys.stdin,], [], [], 0.0)[0]:
@@ -183,12 +189,19 @@ class LfD:
                     if user_input == 'd':
                         state = 'Demonstrate'
                     elif user_input == 'l':
-                        self.model = self.learn(self.demo_states, self.demo_actions)
+                        self.learn(self.demo_states, self.demo_actions)
                         state = 'AskUser'
                     elif user_input == 'e':
                         state = 'Execute'
                     elif user_input == 'r':
                         state = 'Rc'
+                    elif user_input == 'lm':
+                        self.clf = pickle.load(open(self.model_file, 'rb'))
+                        self.render_model()
+                        state = 'AskUser'
+                    elif user_input == 'w':
+                        pickle.dump(self.clf, open(self.model_file, 'wb'))
+                        state = 'AskUser'
                     else:
                         state = 'AskUser'
             elif state == 'Demonstrate':
