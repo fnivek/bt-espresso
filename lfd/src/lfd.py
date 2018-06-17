@@ -21,22 +21,7 @@ from sensor_msgs.msg import JointState
 import py_trees
 import py_trees_ros
 
-from centroid_detector_msgs.msg import DetectCentroidGoal, DetectCentroidAction
-from behavior_manager.interfaces.manipulation_behavior import FullyExtendTorso, ColapseTorso, MoveTorsoBehavior, PickBehavior, TuckWithCondBehavior, PlaceBehavior
-from behavior_manager.interfaces.centroid_detector_behavior import CentroidDetectorBehavior
-
-class SimpleTree:
-    def __init__(self, behav):
-        self.behav = behav
-        self.behav.setup(timeout=30)
-
-    def run_once(self):
-        self.behav.tick_once()
-        while self.behav.status == py_trees.Status.RUNNING:
-            self.behav.tick_once()
-
-    def __str__(self):
-        return self.behav.name
+from action_builders import *
 
 class LfD:
     def __init__(self):
@@ -54,19 +39,21 @@ class LfD:
 
         # Actions
         self.actions = {
-            0: SimpleTree(FullyExtendTorso('extend_torso')),
-            1: SimpleTree(MoveTorsoBehavior('mid_torso', 0.2)),
-            2: SimpleTree(PickBehavior('pick')),
-            3: SimpleTree(CentroidDetectorBehavior('detect_centroid')),
-            4: SimpleTree(TuckWithCondBehavior('tuck', 1)),
-            5: SimpleTree(PlaceBehavior('place')),
+            0: Action('extend_torso', BuildFullyExtendTorso),
+            1: Action('mid_torso', BuildMoveTorsoBehavior),
+            2: Action('pick', BuildPickBehavior),
+            3: Action('detect_centroid', BuildCentroidDetectorBehavior),
+            4: Action('tuck', BuildTuckWithCondBehavior),
+            5: Action('place', BuildPlaceBehavior),
         }
         self.action_names = {}
+        self.action_indices = {}
         for key, value in self.actions.iteritems():
             self.action_names[key] = str(value)
-        num_actions = 1
-        self.last_actions = collections.deque(maxlen=num_actions)
-        for _ in xrange(num_actions):
+            self.action_indices[str(value)] = key
+        num_last_actions = 1
+        self.last_actions = collections.deque(maxlen=num_last_actions)
+        for _ in xrange(num_last_actions):
             self.last_actions.append(0)
 
         # Blackboard setup
@@ -79,21 +66,27 @@ class LfD:
         self.blackboard.set('detect_centroid/max_z', 0.9)
         self.blackboard.set('shelf', String('shelf2'))
         print 'Run a bunch of actions to init blackboard cause I am lazy'
-        self.run_action(3)
-        self.run_action(0)
-        self.run_action(4)
+        self.run_action('detect_centroid')
+        self.run_action('extend_torso')
+        self.run_action('tuck')
         print 'State:', self.blackboard
         print 'Actions:\n\t', self.action_names.values()
 
         # Features setup
         self.feature_names = (['Cx', 'Cy', 'Cz', 'Csuccess']
-            + ['LA' + str(num_actions - i) for i in xrange(self.last_actions.maxlen)])
+            + ['LA' + str(num_last_actions - i) for i in xrange(self.last_actions.maxlen)])
         print 'Features:\n\t', self.feature_names
 
         # Build a perception tree
         # self.build_perception_tree()
 
     def run_action(self, action_id):
+        # If the action_id is a name then get the key
+        try:
+            action_id = self.action_indices[action_id]
+        except:
+            pass
+        # Run the action
         self.actions[action_id].run_once()
         self.last_actions.append(action_id)
 
