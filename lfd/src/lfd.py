@@ -181,7 +181,15 @@ class LfD:
         sleep_rate = rospy.Rate(10)
         while not rospy.is_shutdown():
             if state == 'AskUser':
-                print 'Demonstrate(d), learn(l), execute(e), rc(r), Load model(lm), Write model(w):'
+                print ('Menu:'
+                    '\n\tDemonstrate(d)'
+                    '\n\tlearn(l)'
+                    '\n\texecute(e)'
+                    '\n\trc(r)'
+                    '\n\tLoad model(lm)'
+                    '\n\tWrite model(w)'
+                    '\n\tUndo last demo(u)'
+                    '\n')
                 state = 'WaitForUser'
             elif state == 'WaitForUser':
                 if select.select([sys.stdin,], [], [], 0.0)[0]:
@@ -201,6 +209,11 @@ class LfD:
                         state = 'AskUser'
                     elif user_input == 'w':
                         pickle.dump(self.clf, open(self.model_file, 'wb'))
+                        state = 'AskUser'
+                    elif user_input == 'u':
+                        if self.demo_states is not None and len(self.demo_states) != 0:
+                            self.demo_states = self.demo_states[:-1]
+                            self.demo_actions = self.demo_actions[:-1]
                         state = 'AskUser'
                     else:
                         state = 'AskUser'
