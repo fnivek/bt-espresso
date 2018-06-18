@@ -67,6 +67,7 @@ class LfD:
         # Model
         self.clf = tree.DecisionTreeClassifier()
         self.model_file = 'media/model.sav'
+        self.tree = None
 
         # Actions
         self.actions = {
@@ -152,6 +153,8 @@ class LfD:
         return 0
 
     def render_model(self):
+        if self.tree is not None:
+            self.tree.blackboard_exchange.unregister_services()
         self.tree = self.dt_to_bt(self.clf)
         dot_data = tree.export_graphviz(
             self.clf,
