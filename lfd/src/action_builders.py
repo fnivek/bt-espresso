@@ -6,6 +6,7 @@ from std_msgs.msg import String
 from centroid_detector_msgs.msg import DetectCentroidGoal, DetectCentroidAction
 from behavior_manager.interfaces.manipulation_behavior import FullyExtendTorso, ColapseTorso, MoveTorsoBehavior, PickBehavior, TuckWithCondBehavior, PlaceBehavior
 from behavior_manager.interfaces.centroid_detector_behavior import CentroidDetectorBehavior
+from behavior_manager.interfaces.head_actuate_behavior import HeadMoveBehavior
 
 class Action:
     def __init__(self, name, builder):
@@ -49,3 +50,5 @@ def BuildTuckWithCondBehavior(name):
     return TuckWithCondBehavior(name, 1)
 def BuildPlaceBehavior(name):
     return PlaceBehavior(name)
+def BuildHeadMoveBehavior(name):
+    return HeadMoveBehavior(name, None, 1, 0, 0.5)

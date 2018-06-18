@@ -64,6 +64,7 @@ class LfD:
             3: Action('detect_centroid', BuildCentroidDetectorBehavior),
             4: Action('tuck', BuildTuckWithCondBehavior),
             5: Action('place', BuildPlaceBehavior),
+            6: Action('look_strait', BuildHeadMoveBehavior),
         }
         self.action_names = {}
         self.action_indices = {}
@@ -81,6 +82,7 @@ class LfD:
         self.run_action('detect_centroid')
         self.run_action('extend_torso')
         self.run_action('tuck')
+        self.run_action('look_strait')
         print 'Blackboard:', self.blackboard
         print 'Actions:\n\t', self.action_names.values()
 
