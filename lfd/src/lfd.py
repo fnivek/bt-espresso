@@ -6,6 +6,7 @@ import thread
 import functools
 import collections
 import pickle
+import operator
 
 import graphviz
 
@@ -22,6 +23,24 @@ import py_trees
 import py_trees_ros
 
 from action_builders import *
+
+def shutdown(tree):
+    """Stop the tree."""
+    tree.interrupt()
+
+class LastActionVisitor(py_trees.visitors.VisitorBase):
+    def __init__(self, lfd):
+        self.full = False
+        self.lfd = lfd
+
+    def run(self, behav):
+        # If an action was run and finished then push it to the last actions
+        if behav.name in self.lfd.action_indices.keys():
+            if behav.status != py_trees.common.Status.RUNNING:
+                self.lfd.last_actions.append(self.lfd.action_indices[behav.name])
+                # Update world state
+                world_state = self.lfd.get_state()
+                self.lfd.write_state(world_state)
 
 class LfD:
     def __init__(self):
@@ -58,18 +77,11 @@ class LfD:
 
         # Blackboard setup
         self.blackboard = py_trees.blackboard.Blackboard()
-        self.blackboard.set('detect_centroid/min_x', 0)
-        self.blackboard.set('detect_centroid/max_x', 1.2)
-        self.blackboard.set('detect_centroid/min_y', 0)
-        self.blackboard.set('detect_centroid/max_y', 0.6)
-        self.blackboard.set('detect_centroid/min_z', 0.8)
-        self.blackboard.set('detect_centroid/max_z', 0.9)
-        self.blackboard.set('shelf', String('shelf2'))
-        print 'Run a bunch of actions to init blackboard cause I am lazy'
+        print 'Run a bunch of actions to init blackboard and robot'
         self.run_action('detect_centroid')
         self.run_action('extend_torso')
         self.run_action('tuck')
-        print 'State:', self.blackboard
+        print 'Blackboard:', self.blackboard
         print 'Actions:\n\t', self.action_names.values()
 
         # Features setup
@@ -126,6 +138,7 @@ class LfD:
         return 0
 
     def render_model(self):
+        self.tree = self.dt_to_bt(self.clf)
         dot_data = tree.export_graphviz(
             self.clf,
             out_file=None,
@@ -142,13 +155,21 @@ class LfD:
         self.clf.fit(states, actions)
         self.render_model()
 
-    def execute(self):
+    def execute_dt(self):
         state = self.get_state()
-        print 'World state is:\n' + str(state)
+        print 'World state is:'
+        self.print_state(state)
         print 'Path through tree:\n', self.clf.decision_path(state)
         action_id = self.clf.predict(state)[0]
         print 'Resulting action is: ' + self.action_names[action_id]
         self.run_action(action_id)
+
+    def execute(self):
+        state = self.get_state()
+        self.write_state(state)
+        print 'World state is:'
+        self.print_state(state)
+        self.tree.tick()
 
     def get_state(self):
         # WARNING: Not thread safe!!!!
@@ -165,6 +186,14 @@ class LfD:
           + list(self.last_actions)
         ])
         # return numpy.array([list(self.last_actions)])
+
+    def write_state(self, state):
+        for name, value in zip(self.feature_names, state[0]):
+            self.blackboard.set(name, value)
+
+    def print_state(self, state):
+        for name, value in zip(self.feature_names, state[0]):
+            print '{0}: {1}'.format(name, value)
 
     def run(self):
         # State
@@ -213,7 +242,8 @@ class LfD:
             elif state == 'Demonstrate':
                 print 'Demonstrate'
                 world_state = self.get_state()
-                print 'World state is\n' + str(world_state)
+                print 'World state is'
+                self.print_state(world_state)
                 try:
                     user_input = numpy.array([[int(
                         raw_input('What action should be taken ' + str(self.action_names) + ': ')
@@ -238,6 +268,8 @@ class LfD:
                 print 'Press enter to end execution'
                 self.execute()
                 if select.select([sys.stdin,], [], [], 0.0)[0]:
+                    self.tree.interrupt()
+                    # Interrupting the tree may not allow the last action to be written appropriatly
                     raw_input()
                     state = "AskUser"
             elif state == 'Rc':
@@ -250,6 +282,82 @@ class LfD:
 
             # Sleep if needed
             sleep_rate.sleep()
+
+    def dt_to_bt(self, dt):
+        """Convert a decision tree to a behavior tree."""
+        # Build the root
+        #   The root is a sequence node that first writes the current state to the blackboard then
+        #       Runs the behavior tree
+        root = py_trees.composites.Sequence(name='root')
+        # state_to_bb = StateToBB(name='state_to_bb')
+        # root.add_child(state_to_bb)
+
+        # Build the tree from dt.tree_
+        #   The decision tree is stored in a few arrays of size node_count
+        #   children_left - the child to the left (true) of the node
+        #   children_right - the child to the right (false) of the current node
+        #   threshold - the value to threshold on feat <= thres
+        #   feature - the feature to split on
+        #   value - the node_count by n_outputs=1, max_n_classes array containing the output
+        def build_bt(dt, node_id, parent):
+            """Recursive function for buiding the BT."""
+
+            # Get info from dt
+            left_child = dt.tree_.children_left[node_id]
+            right_child = dt.tree_.children_right[node_id]
+
+            # Check if leaf node or decision node
+            if left_child == -1 or right_child == -1:
+                # Leaf node
+                class_index = dt.classes_[numpy.argmax(dt.tree_.value[node_id][0])]
+                name = self.action_names[class_index]
+                action = self.actions[class_index].get_builder()(name)
+                parent.add_child(action)
+            else:
+                # Decision node
+                #                      ?
+                #        +-------------|------------+
+                #       ->                         ->
+                #     +--|-------+               +--|-------+
+                #   cond   true_sub_tree       !cond  false_sub_tree
+                # Get info from dt
+                feature_name = self.feature_names[dt.tree_.feature[node_id]]
+                thres = dt.tree_.threshold[node_id]
+
+                # Define nodes
+                sel = py_trees.composites.Selector('sel_' + str(node_id))
+                seq_true = py_trees.composites.Sequence('seq_true_' + str(node_id))
+                seq_false = py_trees.composites.Sequence('seq_false_' + str(node_id))
+                cond_true = py_trees.blackboard.CheckBlackboardVariable(
+                    name='cond_{0}_{1}<={2}'.format(node_id, feature_name, thres),
+                    variable_name=feature_name,
+                    expected_value=thres,
+                    comparison_operator=operator.le
+                )
+                cond_false = py_trees.blackboard.CheckBlackboardVariable(
+                    name='cond_{0}_{1}>{2}'.format(node_id, feature_name, thres),
+                    variable_name=feature_name,
+                    expected_value=thres,
+                    comparison_operator=operator.gt
+                )
+
+                # Construct tree
+                parent.add_child(sel)
+                sel.add_children([seq_true, seq_false])
+                seq_true.add_child(cond_true)
+                seq_false.add_child(cond_false)
+                build_bt(dt, left_child, seq_true)
+                build_bt(dt, right_child, seq_false)
+
+
+        build_bt(dt, 0, root)
+
+        tree = py_trees_ros.trees.BehaviourTree(root)
+        tree.visitors.append(LastActionVisitor(self))
+        tree.setup(30)
+        rospy.on_shutdown(functools.partial(shutdown, tree))
+
+        return tree
 
 
 def main():
