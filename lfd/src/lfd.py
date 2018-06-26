@@ -7,9 +7,7 @@ import functools
 import collections
 import pickle
 import operator
-
-import os.path
-import os
+import os, os.path
 
 import graphviz
 
@@ -291,7 +289,7 @@ class LfD:
                     user_input = raw_input('Filename: ')
                     full_path = 'media/' + user_input
                     if os.path.isfile(full_path):
-                        self.clf = pickle.load(open(user_input, 'rb'))
+                        self.clf = pickle.load(open(full_path, 'rb'))
                         self.render_model()
                     else:
                         print "Error: file does not exist!"
@@ -306,9 +304,9 @@ class LfD:
                     full_path = 'media/' + user_input
                     if not os.path.isfile(full_path):
                         print "File does not exist. Creating...",
-                        open(full_path, 'a').close()
+                        open(full_path, 'wb').close()
                         print "Done!"
-                    pickle.dump(self.clf, open(user_input, 'wb'))
+                    pickle.dump(self.clf, open(full_path, 'wb'))
                     state = 'AskUser'
                 except Exception as e:
                     print 'Error:', e
