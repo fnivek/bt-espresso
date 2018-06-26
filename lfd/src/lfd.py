@@ -8,6 +8,9 @@ import collections
 import pickle
 import operator
 
+import os.path
+import os
+
 import graphviz
 
 from sklearn.svm import LinearSVC
@@ -228,12 +231,14 @@ class LfD:
                     elif user_input == 'r':
                         state = 'Rc'
                     elif user_input == 'lm':
-                        self.clf = pickle.load(open(self.model_file, 'rb'))
-                        self.render_model()
-                        state = 'AskUser'
+                        state = 'LoadModel'
+                        # self.clf = pickle.load(open(self.model_file, 'rb'))
+                        # self.render_model()
+                        # state = 'AskUser'
                     elif user_input == 'w':
-                        pickle.dump(self.clf, open(self.model_file, 'wb'))
-                        state = 'AskUser'
+                        state = 'WriteModel'
+                        # pickle.dump(self.clf, open(self.model_file, 'wb'))
+                        # state = 'AskUser'
                     elif user_input == 'u':
                         if self.demo_states is not None and len(self.demo_states) != 0:
                             self.demo_states = self.demo_states[:-1]
@@ -281,6 +286,34 @@ class LfD:
                     self.run_action(int(user_input))
                 except Exception as e:
                     state = 'AskUser'
+            elif state == "LoadModel":
+                try:
+                    user_input = raw_input('Filename: ')
+                    full_path = 'media/' + user_input
+                    if os.path.isfile(full_path):
+                        self.clf = pickle.load(open(user_input, 'rb'))
+                        self.render_model()
+                    else:
+                        print "Error: file does not exist!"
+                    state = 'AskUser'
+                except Exception as e:
+                    print 'Error:', e
+                    state = 'AskUser'
+                    continue
+            elif state == "WriteModel":
+                try:
+                    user_input = raw_input('Filename: ')
+                    full_path = 'media/' + user_input
+                    if not os.path.isfile(full_path):
+                        print "File does not exist. Creating...",
+                        open(full_path, 'a').close()
+                        print "Done!"
+                    pickle.dump(self.clf, open(user_input, 'wb'))
+                    state = 'AskUser'
+                except Exception as e:
+                    print 'Error:', e
+                    state = 'AskUser'
+                    continue
 
             # Sleep if needed
             sleep_rate.sleep()
