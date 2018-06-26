@@ -399,6 +399,8 @@ class LfD:
 
 
 def main():
+    os.chdir(os.path.expanduser('~/catkin_ws/src/mobile_manipulation/lfd'))
+
     lfd = LfD()
     lfd.run()
 
