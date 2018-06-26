@@ -306,6 +306,11 @@ class LfD:
                         print "File does not exist. Creating...",
                         open(full_path, 'wb').close()
                         print "Done!"
+                    else:
+                        print "Warning: File already exists! Old version will be stored as %s.old" % user_input
+                        if os.path.isfile(full_path + '.old'):
+                            os.remove(full_path + '.old')
+                        os.rename(full_path, full_path + '.old')
                     pickle.dump(self.clf, open(full_path, 'wb'))
                     state = 'AskUser'
                 except Exception as e:
