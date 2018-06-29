@@ -29,6 +29,14 @@ def shutdown(tree):
     """Stop the tree."""
     tree.interrupt()
 
+def printMediaDir():
+    print "media/"
+    for file in os.listdir('media'):
+        if file == os.listdir('media')[-1]:
+            print u" \u2514\u2500%s" % file
+        else:
+            print u" \u251c\u2500%s" % file
+
 class LastActionVisitor(py_trees.visitors.VisitorBase):
     def __init__(self, lfd):
         self.full = False
@@ -316,6 +324,7 @@ class LfD:
                 except Exception as e:
                     state = 'AskUser'
             elif state == "LoadModel":
+                printMediaDir()
                 try:
                     user_input = raw_input('Filename: ')
                     full_path = 'media/' + user_input
@@ -330,6 +339,7 @@ class LfD:
                     state = 'AskUser'
                     continue
             elif state == "WriteModel":
+                printMediaDir()
                 try:
                     user_input = raw_input('Filename (.sav type recommended): ')
                     full_path = 'media/' + user_input
