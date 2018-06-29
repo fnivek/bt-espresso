@@ -52,6 +52,9 @@ class LfD:
         # Demonstrations
         self.demo_states = None
         self.demo_actions = None
+        self.redo_states = None
+        self.redo_actions = None
+        # self.redo_last_actions = None
 
         # Model
         self.clf = tree.DecisionTreeClassifier()
@@ -72,7 +75,7 @@ class LfD:
         for key, value in self.actions.iteritems():
             self.action_names[key] = str(value)
             self.action_indices[str(value)] = key
-        num_last_actions = 1
+        num_last_actions = 3
         self.last_actions = collections.deque(maxlen=num_last_actions)
         for _ in xrange(num_last_actions):
             self.last_actions.append(0)
@@ -214,6 +217,7 @@ class LfD:
                     '\n\tLoad model(lm)'
                     '\n\tWrite model(w)'
                     '\n\tUndo last demo(u)'
+                    '\n\tRedo last undone(rd)'
                     '\n')
                 state = 'WaitForUser'
             elif state == 'WaitForUser':
@@ -239,13 +243,40 @@ class LfD:
                         # state = 'AskUser'
                     elif user_input == 'u':
                         if self.demo_states is not None and len(self.demo_states) != 0:
+                            if self.redo_states is not None and len(self.redo_states) != 0:
+                                self.redo_states = numpy.append(self.redo_states, [self.demo_states[-1]], axis=0)
+                                self.redo_actions = numpy.append(self.redo_actions, [self.demo_actions[-1]])
+                                # self.redo_last_actions = numpy.append(self.redo_last_actions, [self.last_actions[-1]])
+                            else:
+                                self.redo_states = [self.demo_states[-1]]
+                                self.redo_actions = [self.demo_actions[-1]]
+                                # self.redo_last_actions = [self.last_actions[-1]]
                             self.demo_states = self.demo_states[:-1]
                             self.demo_actions = self.demo_actions[:-1]
+                            # self.last_actions.pop()
+                        else:
+                            print "No demonstration to undo."
+                        state = 'AskUser'
+                    elif user_input == 'rd':
+                        if self.redo_states is not None and len(self.redo_states) != 0:
+                            # print self.demo_states
+                            # print self.redo_states
+                            # print self.redo_states[-1]
+                            self.demo_states = numpy.append(self.demo_states, [self.redo_states[-1]], axis=0)
+                            self.demo_actions = numpy.append(self.demo_actions, [self.redo_actions[-1]])
+                            # self.last_actions.append(self.redo_last_actions[-1])
+                            self.redo_states = self.redo_states[:-1]
+                            self.redo_actions = self.redo_actions[:-1]
+                            # self.redo_last_actions = self.redo_last_actions[:-1]
+                        else:
+                            print "No undone demonstartion to redo."
                         state = 'AskUser'
                     else:
                         state = 'AskUser'
             elif state == 'Demonstrate':
                 print 'Demonstrate'
+                self.redo_states = None
+                self.redo_actions = None
                 world_state = self.get_state()
                 print 'World state is'
                 self.print_state(world_state)
@@ -300,7 +331,7 @@ class LfD:
                     continue
             elif state == "WriteModel":
                 try:
-                    user_input = raw_input('Filename: ')
+                    user_input = raw_input('Filename (.sav type recommended): ')
                     full_path = 'media/' + user_input
                     if not os.path.isfile(full_path):
                         print "File does not exist. Creating...",
