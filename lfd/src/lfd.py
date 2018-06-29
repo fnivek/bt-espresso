@@ -226,6 +226,7 @@ class LfD:
                     '\n\tWrite model(w)'
                     '\n\tUndo last demo(u)'
                     '\n\tRedo last undone(rd)'
+                    '\n\tQuit(q)'
                     '\n')
                 state = 'WaitForUser'
             elif state == 'WaitForUser':
@@ -279,6 +280,12 @@ class LfD:
                         else:
                             print "No undone demonstartion to redo."
                         state = 'AskUser'
+                    elif user_input == 'q':
+                        user_input = raw_input('Are you sure you want to quit? (y/n)')
+                        if user_input == 'y':
+                            return
+                        else:
+                            state = 'AskUser'
                     else:
                         state = 'AskUser'
             elif state == 'Demonstrate':
