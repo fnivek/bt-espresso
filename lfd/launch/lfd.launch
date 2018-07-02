@@ -6,6 +6,9 @@
   <!-- Behavior tree gui -->
   <node name="rqt_py_trees" pkg="rqt_py_trees" type="rqt_py_trees"/>
 
-  <!-- lfd -->
-  <node name="lfd" pkg="lfd" type="lfd.py" output="screen"/>
+  <!-- lfd cml version -->
+  <!-- <node name="lfd" pkg="lfd" type="lfd.py" output="screen"/> -->
+
+  <!-- lfd gui version -->
+  <node name="lfd" pkg="lfd" type="lfd_gui.py" output="screen"/>
 </launch>
