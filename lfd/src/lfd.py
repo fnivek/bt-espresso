@@ -69,6 +69,25 @@ class LfD:
         self.model_file = 'media/model.sav'
         self.tree = None
 
+        # Robot-Specific Config
+        self.joint_names = [
+            "l_wheel_joint",
+            "r_wheel_joint",
+            "torso_lift_joint",
+            "bellows_joint",
+            "head_pan_joint",
+            "head_tilt_joint",
+            "shoulder_pan_joint",
+            "shoulder_lift_joint",
+            "upperarm_roll_joint",
+            "elbow_flex_joint",
+            "forearm_roll_joint",
+            "wrist_flex_joint",
+            "wrist_roll_joint",
+            "l_gripper_finger_joint",
+            "r_gripper_finger_joint",
+        ]
+
         # Actions
         self.actions = {
             0: Action('extend_torso', BuildFullyExtendTorso),
@@ -79,6 +98,7 @@ class LfD:
             5: Action('place', BuildPlaceBehavior),
             6: Action('look_strait', BuildHeadMoveBehavior),
             7: Action('text to speech', BuildTTSBehavior, 'hello')
+            8: Action('update_joints', BuildUpdateJointsBehavior),
         }
         self.action_names = {}
         self.action_indices = {}
@@ -97,12 +117,26 @@ class LfD:
         self.run_action('extend_torso')
         self.run_action('tuck')
         self.run_action('look_strait')
+        while True:
+            self.run_action('update_joints')
+            fail = False
+            for name in self.joint_names:
+                if self.blackboard.get(name + "_position") is None:
+                    print "Do not yet have value for %s_position" % name
+                    fail = True
+                    break
+            if not fail:
+                break
+
         print 'Blackboard:', self.blackboard
         print 'Actions:\n\t', self.action_names.values()
 
         # Features setup
         self.feature_names = (['Cx', 'Cy', 'Cz', 'Csuccess']
-            + ['LA' + str(num_last_actions - i) for i in xrange(self.last_actions.maxlen)])
+            + ['LA' + str(num_last_actions - i) for i in xrange(self.last_actions.maxlen)]
+            + [name + "_position" for name in self.joint_names]
+            + [name + "_velocity" for name in self.joint_names]
+            + [name + "_effort" for name in self.joint_names])
         print 'Features:\n\t', self.feature_names
 
         # Build a perception tree
@@ -121,18 +155,19 @@ class LfD:
     def build_perception_tree(self):
         # Define behaviors
         root = py_trees.composites.Parallel('perception_root')
-        get_joint_states = py_trees_ros.subscribers.ToBlackboard('get_joint_states',
-            '/joint_states',
-            JointState,
-            {'joint_states': None},
-            clearing_policy=py_trees.common.ClearingPolicy.NEVER
-        )
-        detect_centroid = CentroidDetectorBehavior('detect_centroid')
+        # get_joint_states = py_trees_ros.subscribers.ToBlackboard('get_joint_states',
+        #     '/joint_states',
+        #     JointState,
+        #     {'joint_states': None},
+        #     clearing_policy=py_trees.common.ClearingPolicy.NEVER
+        # )
+        # detect_centroid = CentroidDetectorBehavior('detect_centroid')
+        get_joint_states = py_trees_ros.trees.BehaviourTree(JointToBlackboardBehavior(name="something", topic_name="/joint_states", topic_type=JointState))
 
         # Define structure of tree
         root.add_children([
             get_joint_states,
-            detect_centroid
+            # detect_centroid
         ])
 
         # Wrap tree in ros tree
@@ -169,6 +204,9 @@ class LfD:
 
     # Produces a model from states
     def learn(self, states, actions):
+        print states
+        print "\n\n\n"
+        print actions
         self.clf = tree.DecisionTreeClassifier()
         self.clf.fit(states, actions)
         self.render_model()
@@ -201,7 +239,10 @@ class LfD:
         ] # + list(self.blackboard.joint_states.position)
           # + list(self.blackboard.joint_states.velocity)
           # + list(self.blackboard.joint_states.effort)
-          + list(self.last_actions)
+        + list(self.last_actions)
+        + [self.blackboard.get(name + "_position") for name in self.joint_names]
+        + [self.blackboard.get(name + "_velocity") for name in self.joint_names]
+        + [self.blackboard.get(name + "_effort") for name in self.joint_names]
         ])
         # return numpy.array([list(self.last_actions)])
 
@@ -285,7 +326,7 @@ class LfD:
                             print "No undone demonstartion to redo."
                         state = 'AskUser'
                     elif user_input == 'q':
-                        user_input = raw_input('Are you sure you want to quit? (y/n)')
+                        user_input = raw_input('Are you sure you want to quit? (y/n) ')
                         if user_input == 'y':
                             return
                         else:

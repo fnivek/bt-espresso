@@ -2,12 +2,14 @@ import py_trees
 import py_trees_ros
 
 from std_msgs.msg import String
+from sensor_msgs.msg import JointState
 
 from centroid_detector_msgs.msg import DetectCentroidGoal, DetectCentroidAction
 from behavior_manager.interfaces.manipulation_behavior import FullyExtendTorso, ColapseTorso, MoveTorsoBehavior, PickBehavior, TuckWithCondBehavior, PlaceBehavior
 from behavior_manager.interfaces.centroid_detector_behavior import CentroidDetectorBehavior
 from behavior_manager.interfaces.head_actuate_behavior import HeadMoveBehavior
 from behavior_manager.interfaces.tts_behavior import TTSBehavior
+from behavior_manager.interfaces.update_joints_behavior import JointToBlackboardBehavior
 
 class Action:
     def __init__(self, name, builder, text=None):
@@ -58,3 +60,5 @@ def BuildHeadMoveBehavior(name):
     return HeadMoveBehavior(name, None, 1, 0, 0.5)
 def BuildTTSBehavior(name, text='hello'):
     return TTSBehavior(name, text)
+def BuildUpdateJointsBehavior(name):
+    return JointToBlackboardBehavior(name=name, topic_name="/joint_states", topic_type=JointState)
