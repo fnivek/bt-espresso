@@ -8,13 +8,16 @@ from behavior_manager.interfaces.manipulation_behavior import FullyExtendTorso, 
 from behavior_manager.interfaces.centroid_detector_behavior import CentroidDetectorBehavior
 from behavior_manager.interfaces.head_actuate_behavior import HeadMoveBehavior
 from behavior_manager.interfaces.tts_behavior import TTSBehavior
+from behavior_manager.interfaces.navigation_behavior import *
 
 class Action:
-    def __init__(self, name, builder, text=None):
+    def __init__(self, name, builder, text=None, amp=None, direction=None):
         self.name = name
         self.builder = builder
         if text != None:
             self.action = builder(name, text)
+        elif amp != None and direction != None:
+            self.action = builder(name, amp, direction)
         else:
             self.action = builder(name)
         self.action.setup(timeout=30)
@@ -58,3 +61,16 @@ def BuildHeadMoveBehavior(name):
     return HeadMoveBehavior(name, None, 1, 0, 0.5)
 def BuildTTSBehavior(name, text='hello'):
     return TTSBehavior(name, text)
+def BuildRelativeMoveBehavior(name, amp, direction):
+    if direction == 'forward':
+        return MoveForwardBehavior(name, amp)
+    elif direction == 'backward':
+        return MoveBackwardBehavior(name, amp)
+    elif direction == 'right':
+        return MoveRightBehavior(name, amp)
+    elif direction == 'left':
+        return MoveLeftBehavior(name, amp)
+    elif direction == 'turn':
+        return TurnInPlaceBehavior(name, amp)
+    else:
+        return None

@@ -114,7 +114,7 @@ class LfDGui(QtGui.QMainWindow):
 		
 		# Add connections
 		exec_interface.interrupt_btn.clicked.connect(self.interrupt_exec)
-		exec_interface.back_btn.clicked.connect(self.display_home)
+		# exec_interface.back_btn.clicked.connect(self.display_home)
 		
 		# Show the layout
 		self.setCentralWidget(exec_interface)
@@ -169,6 +169,11 @@ class LfDGui(QtGui.QMainWindow):
 			QtGui.QMessageBox.warning(self,"Error",  
                              self.tr("The robot haven't learned anything yet!"))
 		else:
+			# Shut down the currently active executing thread
+			if self.executingThread != None:
+				self.executingThread.interrupt_flag = True
+				self.executingThread = None
+
 			# Show the interface
 			self.display_exec()
 			# Create a new thread for ticking the tree
@@ -179,6 +184,9 @@ class LfDGui(QtGui.QMainWindow):
 		self.lfd.tree.interrupt()
 		# Stop the running thread
 		self.executingThread.interrupt_flag = True
+		self.executingThread = None
+		QtGui.QMessageBox.information(self, 'Success', 'Stop the execution!')
+		self.display_home()
 
 	def learn_cb(self):
 		self.lfd.learn(self.lfd.demo_states, self.lfd.demo_actions)
@@ -228,7 +236,7 @@ class Home(QtGui.QWidget):
 		self.menu_font.setBold(True)
 		self.menu_font.setWeight(75)
 		self.menu_label = QtGui.QLabel()
-		self.menu_label.setText("Meanu:")
+		self.menu_label.setText("Menu:")
 		self.menu_label.setFont(self.menu_font)
 
 		self.vlayout.addWidget(self.menu_label)
@@ -342,23 +350,23 @@ class ExecuteInterface(QtGui.QWidget):
 		self.vlayout.addStretch()
 
 		# Buttons
-		self.interrupt_btn = QtGui.QPushButton('Stop execution')
+		self.interrupt_btn = QtGui.QPushButton('Stop Execution and Go Back')
 		self.interrupt_btn.setFont(self.newFont)
 		self.interrupt_btn.resize(self.interrupt_btn.sizeHint())
 		self.vlayout.addWidget(self.interrupt_btn)
 
-		self.vlayout.addStretch()
+		# self.vlayout.addStretch()
 
-		# Label
-		self.back_label = QtGui.QLabel()
-		self.back_label.setText("Go Back:")
-		self.back_label.setFont(self.menu_font)
-		self.vlayout.addWidget(self.back_label)
+		# # Label
+		# self.back_label = QtGui.QLabel()
+		# self.back_label.setText("Go Back:")
+		# self.back_label.setFont(self.menu_font)
+		# self.vlayout.addWidget(self.back_label)
 
-		self.back_btn = QtGui.QPushButton('Go back')
-		self.back_btn.setFont(self.newFont)
-		self.back_btn.resize(self.back_btn.sizeHint())
-		self.vlayout.addWidget(self.back_btn)
+		# self.back_btn = QtGui.QPushButton('Go back')
+		# self.back_btn.setFont(self.newFont)
+		# self.back_btn.resize(self.back_btn.sizeHint())
+		# self.vlayout.addWidget(self.back_btn)
 
 		self.setLayout(self.vlayout)
 
