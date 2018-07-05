@@ -97,7 +97,7 @@ class LfD:
             4: Action('tuck', BuildTuckWithCondBehavior),
             5: Action('place', BuildPlaceBehavior),
             6: Action('look_strait', BuildHeadMoveBehavior),
-            7: Action('text to speech', BuildTTSBehavior, 'hello')
+            7: Action('text to speech', BuildTTSBehavior, 'hello'),
             8: Action('update_joints', BuildUpdateJointsBehavior),
         }
         self.action_names = {}
