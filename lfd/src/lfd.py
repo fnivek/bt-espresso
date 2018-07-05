@@ -19,6 +19,7 @@ import rospy
 import actionlib
 from std_msgs.msg import String
 from sensor_msgs.msg import JointState
+import navigation_msgs.msg
 
 import py_trees
 import py_trees_ros
@@ -98,7 +99,8 @@ class LfD:
             5: Action('place', BuildPlaceBehavior),
             6: Action('look_strait', BuildHeadMoveBehavior),
             7: Action('text to speech', BuildTTSBehavior, 'hello'),
-            8: Action('update_joints', BuildUpdateJointsBehavior),
+            8: Action('update_joints', BuildUpdateJointsBehavior)
+            # 9: Action('relative forward', BuildRelativeMoveBehavior, None, 0.5, 'forward')
         }
         self.action_names = {}
         self.action_indices = {}

@@ -3,6 +3,9 @@
 import sys
 from lfd import *
 from PyQt4 import QtGui, QtCore
+import threading
+import time
+import rospy
 
 class LfDGui(QtGui.QMainWindow):
 
@@ -10,6 +13,9 @@ class LfDGui(QtGui.QMainWindow):
 		super(LfDGui, self).__init__()
 		# lfd instance
 		self.lfd = LfD()
+
+		# Thread for execution
+		self.executingThread = None
 
 		# Set up the basic frame
 		self.setGeometry(50, 50, 400, 450)
@@ -47,6 +53,7 @@ class LfDGui(QtGui.QMainWindow):
 		home_layout.btn_lm.clicked.connect(self.loadmodel_cb)
 		home_layout.btn_wm.clicked.connect(self.writemodel_cb)
 		home_layout.btn_u.clicked.connect(self.undo_cb)
+		home_layout.btn_rd.clicked.connect(self.redo_cb)
 
 		# Show the layout
 		self.setGeometry(200, 200, 500, 300)
@@ -56,9 +63,10 @@ class LfDGui(QtGui.QMainWindow):
 		self.show()
 
 	def display_action(self):
-		# TODO: 
-		# All button setting should be done
-		# in the constructor of ActionInterface, not here
+		'''
+		TODO: All button setting should be done
+		in the constructor of ActionInterface, not here
+		'''
 
 		# Action interface layout
 		action_interface_layout = ActionInterface()
@@ -105,12 +113,27 @@ class LfDGui(QtGui.QMainWindow):
 		exec_interface = ExecuteInterface()
 		
 		# Add connections
-		exec_interface.interrupt_btn.clicked.connect(self.lfd.tree.interrupt)
-		exec_interface.back_btn.clicked.connect(self.display_home)
+		exec_interface.interrupt_btn.clicked.connect(self.interrupt_exec)
+		# exec_interface.back_btn.clicked.connect(self.display_home)
 		
 		# Show the layout
 		self.setCentralWidget(exec_interface)
 		self.show()
+
+	def redo_cb(self):
+		if self.lfd.redo_states is not None and len(self.lfd.redo_states) != 0:
+			# print self.demo_states
+			# print self.redo_states
+			# print self.redo_states[-1]
+			self.lfd.demo_states = numpy.append(self.lfd.demo_states, [self.lfd.redo_states[-1]], axis=0)
+			self.lfd.demo_actions = numpy.append(self.lfd.demo_actions, [self.lfd.redo_actions[-1]])
+			# self.last_actions.append(self.redo_last_actions[-1])
+			self.redo_states = self.redo_states[:-1]
+			self.redo_actions = self.redo_actions[:-1]
+			# self.redo_last_actions = self.redo_last_actions[:-1]
+		else:
+			print "No undone demonstartion to redo."
+		QtGui.QMessageBox.information(self, 'Success', 'Success in redoing the action!')
 
 	def undo_cb(self):
 		if self.lfd.demo_states is not None and len(self.lfd.demo_states) != 0:
@@ -137,6 +160,7 @@ class LfDGui(QtGui.QMainWindow):
 		QtGui.QMessageBox.information(self, 'Success', 'Success in performing ' + action_name +'!')
 
 	def execute_cb(self):
+
 		if self.lfd.demo_actions != None:
 			execute_flag = True
 		else:
@@ -145,9 +169,24 @@ class LfDGui(QtGui.QMainWindow):
 			QtGui.QMessageBox.warning(self,"Error",  
                              self.tr("The robot haven't learned anything yet!"))
 		else:
+			# Shut down the currently active executing thread
+			if self.executingThread != None:
+				self.executingThread.interrupt_flag = True
+				self.executingThread = None
+
 			# Show the interface
 			self.display_exec()
-			self.lfd.execute()
+			# Create a new thread for ticking the tree
+			self.executingThread = execThread('execThread', self.lfd)
+			self.executingThread.start()
+
+	def interrupt_exec(self):
+		self.lfd.tree.interrupt()
+		# Stop the running thread
+		self.executingThread.interrupt_flag = True
+		self.executingThread = None
+		QtGui.QMessageBox.information(self, 'Success', 'Stop the execution!')
+		self.display_home()
 
 	def learn_cb(self):
 		self.lfd.learn(self.lfd.demo_states, self.lfd.demo_actions)
@@ -175,6 +214,11 @@ class LfDGui(QtGui.QMainWindow):
 											"Do you want to close LfD Gui?", 
 											QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
 		if choice == QtGui.QMessageBox.Yes:
+			# Shut down the active executing thread
+			if self.executingThread != None:
+				self.executingThread.interrupt_flag = True
+				self.executingThread = None
+				print("Shut down the active executing thread.")
 			print("LfD Gui exits.")
 			sys.exit()
 		else:
@@ -197,7 +241,7 @@ class Home(QtGui.QWidget):
 		self.menu_font.setBold(True)
 		self.menu_font.setWeight(75)
 		self.menu_label = QtGui.QLabel()
-		self.menu_label.setText("Meanu:")
+		self.menu_label.setText("Menu:")
 		self.menu_label.setFont(self.menu_font)
 
 		self.vlayout.addWidget(self.menu_label)
@@ -246,6 +290,12 @@ class Home(QtGui.QWidget):
 		self.btn_u.setFont(self.newFont)
 		self.btn_u.move(0, 100)
 
+		self.btn_rd = QtGui.QPushButton("Redo last undone", self)
+		self.btn_rd.resize(self.btn_rd.minimumSizeHint())
+		self.btn_rd.setObjectName("Redo last undone")
+		self.btn_rd.setFont(self.newFont)
+		self.btn_rd.move(0, 100)
+
 		self.vlayout.addWidget(self.btn_d)
 		self.vlayout.addWidget(self.btn_l)
 		self.vlayout.addWidget(self.btn_e)
@@ -253,6 +303,7 @@ class Home(QtGui.QWidget):
 		self.vlayout.addWidget(self.btn_lm)
 		self.vlayout.addWidget(self.btn_wm)
 		self.vlayout.addWidget(self.btn_u)
+		self.vlayout.addWidget(self.btn_rd)
 
 		# Set up the layout
 		self.setLayout(self.vlayout)
@@ -304,25 +355,42 @@ class ExecuteInterface(QtGui.QWidget):
 		self.vlayout.addStretch()
 
 		# Buttons
-		self.interrupt_btn = QtGui.QPushButton('Stop execution')
+		self.interrupt_btn = QtGui.QPushButton('Stop Execution and Go Back')
 		self.interrupt_btn.setFont(self.newFont)
 		self.interrupt_btn.resize(self.interrupt_btn.sizeHint())
 		self.vlayout.addWidget(self.interrupt_btn)
 
-		self.vlayout.addStretch()
+		# self.vlayout.addStretch()
 
-		# Label
-		self.back_label = QtGui.QLabel()
-		self.back_label.setText("Go Back:")
-		self.back_label.setFont(self.menu_font)
-		self.vlayout.addWidget(self.back_label)
+		# # Label
+		# self.back_label = QtGui.QLabel()
+		# self.back_label.setText("Go Back:")
+		# self.back_label.setFont(self.menu_font)
+		# self.vlayout.addWidget(self.back_label)
 
-		self.back_btn = QtGui.QPushButton('Go back')
-		self.back_btn.setFont(self.newFont)
-		self.back_btn.resize(self.back_btn.sizeHint())
-		self.vlayout.addWidget(self.back_btn)
+		# self.back_btn = QtGui.QPushButton('Go back')
+		# self.back_btn.setFont(self.newFont)
+		# self.back_btn.resize(self.back_btn.sizeHint())
+		# self.vlayout.addWidget(self.back_btn)
 
 		self.setLayout(self.vlayout)
+
+class execThread(threading.Thread):
+
+	def __init__(self, name, lfd):
+		threading.Thread.__init__(self)
+		self.name = name
+		self.lfd = lfd
+		# Hard code the ticking rate
+		self.sleep_rate = rospy.Rate(10)
+		self.interrupt_flag = False
+
+	def run(self):
+		while not self.interrupt_flag:
+			self.lfd.execute()
+			self.sleep_rate.sleep()
+
+
 
 def main():
 	app = QtGui.QApplication(sys.argv)
