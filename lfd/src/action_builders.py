@@ -16,6 +16,9 @@ class Action:
     def __init__(self, name, builder, text=None, amp=None, direction=None):
         self.name = name
         self.builder = builder
+        self.text = text
+        self.amp = amp
+        self.direction = direction
         if text != None:
             self.action = builder(name, text)
         elif amp != None and direction != None:
@@ -65,7 +68,7 @@ def BuildTTSBehavior(name, text='hello'):
     return TTSBehavior(name, text)
 def BuildUpdateJointsBehavior(name):
     return JointToBlackboardBehavior(name=name, topic_name="/joint_states", topic_type=JointState)
-def BuildRelativeMoveBehavior(name, amp, direction):
+def BuildRelativeMoveBehavior(name, amp=0.5, direction='forward'):
     if direction == 'forward':
         return MoveForwardBehavior(name, amp)
     elif direction == 'backward':

@@ -99,8 +99,8 @@ class LfD:
             5: Action('place', BuildPlaceBehavior),
             6: Action('look_strait', BuildHeadMoveBehavior),
             7: Action('text to speech', BuildTTSBehavior, 'hello'),
-            8: Action('update_joints', BuildUpdateJointsBehavior)
-            # 9: Action('relative forward', BuildRelativeMoveBehavior, None, 0.5, 'forward')
+            8: Action('update_joints', BuildUpdateJointsBehavior),
+            9: Action('relative forward', BuildRelativeMoveBehavior, None, 0.5, 'forward')
         }
         self.action_names = {}
         self.action_indices = {}
@@ -444,7 +444,22 @@ class LfD:
                 # Leaf node
                 class_index = dt.classes_[numpy.argmax(dt.tree_.value[node_id][0])]
                 name = self.action_names[class_index]
-                action = self.actions[class_index].get_builder()(name)
+                text = self.actions[class_index].text
+                amp = self.actions[class_index].amp
+                direction = self.actions[class_index].direction
+                
+                # action = self.actions[class_index].get_builder()(name)
+
+                if text != None:
+                    action = self.actions[class_index].get_builder()(name, text)
+                elif amp != None and direction != None:
+                    action = self.actions[class_index].get_builder()(name=name, amp=amp, direction=direction)
+                elif amp != None and direction == None:
+                    action = self.actions[class_index].get_builder()(name=name, amp=amp)
+                elif amp == None and direction != None:
+                    action = self.actions[class_index].get_builder()(name=name, direction=direction)
+                else:
+                    action = self.actions[class_index].get_builder()(name)
                 parent.add_child(action)
             else:
                 # Decision node
