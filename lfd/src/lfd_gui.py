@@ -17,6 +17,9 @@ class LfDGui(QtGui.QMainWindow):
 		# Thread for execution
 		self.executingThread = None
 
+		# Callback function for the button in actions
+		self.button_cb = None
+
 		# Set up the basic frame
 		self.setGeometry(50, 50, 400, 450)
 		self.setFixedSize(400, 450)
@@ -56,7 +59,7 @@ class LfDGui(QtGui.QMainWindow):
 		home_layout.btn_rd.clicked.connect(self.redo_cb)
 
 		# Show the layout
-		self.setGeometry(200, 200, 500, 300)
+		self.setGeometry(200, 200, 750, 500)
 		self.setWindowTitle("Learning from Demonstration")
 		self.setWindowIcon(QtGui.QIcon('lfd_logo.png'))
 		self.setCentralWidget(home_layout)
@@ -73,17 +76,19 @@ class LfDGui(QtGui.QMainWindow):
 
 		# Choose callback function
 		if self.sender().objectName() == "Demonstrate":
-			button_cb = self.demonstrate_cb
+			self.button_cb = self.demonstrate_cb
 		elif self.sender().objectName() == "Rc":
-			button_cb = self.rc_cb
+			self.button_cb = self.rc_cb
+		elif self.sender().objectName() == "add_tts_behavior":
+			pass
 		else:
-			button_cb = None
+			self.button_cb = None
 
 		# Action buttons
 		for key, name in self.lfd.action_names.iteritems():
 			button = QtGui.QPushButton(name)
 			button.setObjectName(name)
-			button.clicked.connect(button_cb)
+			button.clicked.connect(self.button_cb)
 			button.setFont(action_interface_layout.newFont)
 			action_interface_layout.vlayout.addWidget(button)
 
@@ -91,7 +96,7 @@ class LfDGui(QtGui.QMainWindow):
 
 		# Label
 		action_interface_layout.back_label = QtGui.QLabel()
-		action_interface_layout.back_label.setText("Go Back:")
+		action_interface_layout.back_label.setText("Options:")
 		action_interface_layout.back_label.setFont(action_interface_layout.menu_font)
 
 		action_interface_layout.vlayout.addWidget(action_interface_layout.back_label)
@@ -103,6 +108,14 @@ class LfDGui(QtGui.QMainWindow):
 
 		# Set up go back button connections
 		action_interface_layout.back_btn.clicked.connect(self.display_home)
+
+		# Button for add TTS behaviors
+		action_interface_layout.tts_btn = QtGui.QPushButton("Add TTS Behavior")
+		action_interface_layout.tts_btn.setFont(action_interface_layout.newFont)
+		action_interface_layout.vlayout.addWidget(action_interface_layout.tts_btn)
+
+		# Set up add tts button connections
+		action_interface_layout.tts_btn.clicked.connect(self.display_tts)
 
 		# Show the layout
 		self.setCentralWidget(action_interface_layout)
@@ -119,6 +132,32 @@ class LfDGui(QtGui.QMainWindow):
 		# Show the layout
 		self.setCentralWidget(exec_interface)
 		self.show()
+
+	def display_tts(self):
+		# Add TTS interface layout
+		tts_interface = TTSInterface()
+
+		# Add connectnios
+		tts_interface.text_field.returnPressed.connect(self.add_tts_behavior)
+		tts_interface.back_btn.clicked.connect(self.display_action)
+
+		# Show the layout
+		self.setCentralWidget(tts_interface)
+		self.show()
+
+	def add_tts_behavior(self):
+		line_edit = self.sender()
+		tts_text = str(line_edit.text())
+		new_name = 'say ' + tts_text
+		new_key = len(self.lfd.actions)
+		# Add new action
+		self.lfd.actions[new_key] = Action(new_name, BuildTTSBehavior, tts_text)
+		self.lfd.action_names[new_key] = new_name
+		self.lfd.action_indices[new_name] = new_key
+		# Clear the editor and output the prompt
+		line_edit.clear()
+		QtGui.QMessageBox.information(self, 'Success', 'Success in adding TTS behavior!')
+
 
 	def redo_cb(self):
 		if self.lfd.redo_states is not None and len(self.lfd.redo_states) != 0:
@@ -374,6 +413,58 @@ class ExecuteInterface(QtGui.QWidget):
 		# self.vlayout.addWidget(self.back_btn)
 
 		self.setLayout(self.vlayout)
+
+class TTSInterface(QtGui.QWidget):
+
+	def __init__(self):
+		super(TTSInterface, self).__init__()
+
+		# Font
+		self.newFont = QtGui.QFont("Helvetica", 16, QtGui.QFont.Bold)
+
+		# Layout
+		self.vlayout = QtGui.QVBoxLayout()
+
+		# Label
+		self.menu_font = QtGui.QFont()
+		self.menu_font.setPointSize(24)
+		self.menu_font.setBold(True)
+		self.menu_font.setWeight(75)
+		self.menu_label = QtGui.QLabel()
+		self.menu_label.setText("Add Text:")
+		self.menu_label.setFont(self.menu_font)
+
+		self.vlayout.addWidget(self.menu_label)
+		self.vlayout.addStretch()
+
+		# Add prompt
+		self.prompt_font = QtGui.QFont()
+		self.prompt_font.setPointSize(14)
+		self.prompt_font.setBold(False)
+		self.prompt = QtGui.QLabel()
+		self.prompt.setText("Press Enter after inputing the text")
+		self.prompt.setFont(self.prompt_font)
+
+		self.vlayout.addWidget(self.prompt)
+		self.vlayout.addStretch()
+
+		# Text Field
+		self.text_field = QtGui.QLineEdit()
+		self.text_field.setFont(self.newFont)
+		self.text_field.resize(self.text_field.sizeHint())
+		self.vlayout.addWidget(self.text_field)
+
+		self.vlayout.addStretch()
+
+		# Go back button
+		self.back_btn = QtGui.QPushButton("Go Back")
+		self.back_btn.setFont(self.newFont)
+		self.back_btn.setObjectName("add_tts_behavior")
+		self.vlayout.addWidget(self.back_btn)
+
+		# Set up the layout
+		self.setLayout(self.vlayout)
+
 
 class execThread(threading.Thread):
 
