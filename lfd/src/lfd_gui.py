@@ -6,6 +6,7 @@ from PyQt4 import QtGui, QtCore
 import threading
 import time
 import rospy
+import subprocess
 
 class LfDGui(QtGui.QMainWindow):
 
@@ -21,8 +22,8 @@ class LfDGui(QtGui.QMainWindow):
 		self.button_cb = None
 
 		# Set up the basic frame
-		self.setGeometry(50, 50, 400, 450)
-		self.setFixedSize(400, 450)
+		self.setGeometry(50, 50, 500, 600)
+		self.setFixedSize(500, 600)
 
 		# Set up the status bar
 		self.statusBar = QtGui.QStatusBar()
@@ -57,6 +58,8 @@ class LfDGui(QtGui.QMainWindow):
 		home_layout.btn_wm.clicked.connect(self.writemodel_cb)
 		home_layout.btn_u.clicked.connect(self.undo_cb)
 		home_layout.btn_rd.clicked.connect(self.redo_cb)
+		home_layout.btn_load.clicked.connect(self.load_config_file)
+		home_layout.btn_quit.clicked.connect(self.closeEvent)
 
 		# Show the layout
 		self.setGeometry(200, 200, 750, 500)
@@ -158,6 +161,28 @@ class LfDGui(QtGui.QMainWindow):
 		line_edit.clear()
 		QtGui.QMessageBox.information(self, 'Success', 'Success in adding TTS behavior!')
 
+	def add_nav_behavior(self):
+		new_key = len(self.lfd.actions)
+		# Add nav actions
+		self.lfd.actions[new_key] = Action('nav_to_bag', BuildNavToBagBehavior)
+		self.lfd.action_names[new_key] = 'nav_to_bag'
+		self.lfd.action_indices['nav_to_bag'] = new_key
+
+		new_key += 1
+		self.lfd.actions[new_key] = Action('nav_to_items', BuildNavToItemsBehavior)
+		self.lfd.action_names[new_key] = 'nav_to_items'
+		self.lfd.action_indices['nav_to_items'] = new_key
+
+	def load_config_file(self):
+		# Load the configure file through cmd line
+		# Hard-code the path of config file
+		os.chdir(os.path.expanduser('~/catkin_ws/src/mobile_manipulation/lfd/lfd/config/cfgs'))
+		new_proc = subprocess.Popen(['rosparam', 'load', 'lfd_configs.yaml'])
+		new_proc.wait()
+		os.chdir(os.path.expanduser('~/catkin_ws'))
+		self.add_nav_behavior()
+		QtGui.QMessageBox.information(self, 'Success', 'Success in loading configure file and adding nav behavior!')
+		
 
 	def redo_cb(self):
 		if self.lfd.redo_states is not None and len(self.lfd.redo_states) != 0:
@@ -287,49 +312,49 @@ class Home(QtGui.QWidget):
 		self.vlayout.addStretch()
 
 		# Buttons for users
-		self.btn_d = QtGui.QPushButton("Demonstrate", self)
+		self.btn_d = QtGui.QPushButton("Demonstrate")
 		self.btn_d.resize(self.btn_d.minimumSizeHint())
 		self.btn_d.setObjectName("Demonstrate")
 		self.btn_d.setFont(self.newFont)
 		self.btn_d.move(0, 100)
 
-		self.btn_l = QtGui.QPushButton("Learn", self)
+		self.btn_l = QtGui.QPushButton("Learn")
 		self.btn_l.resize(self.btn_l.minimumSizeHint())
 		self.btn_l.setObjectName("Learn")
 		self.btn_l.setFont(self.newFont)
 		self.btn_l.move(0, 100)
 
-		self.btn_e = QtGui.QPushButton("Execute", self)
+		self.btn_e = QtGui.QPushButton("Execute")
 		self.btn_e.resize(self.btn_e.minimumSizeHint())
 		self.btn_e.setObjectName("Execute")
 		self.btn_e.setFont(self.newFont)
 		self.btn_e.move(0, 100)
 
-		self.btn_r = QtGui.QPushButton("Rc", self)
+		self.btn_r = QtGui.QPushButton("Rc")
 		self.btn_r.resize(self.btn_r.minimumSizeHint())
 		self.btn_r.setObjectName("Rc")
 		self.btn_r.setFont(self.newFont)
 		self.btn_r.move(0, 100)
 
-		self.btn_lm = QtGui.QPushButton("Load model", self)
+		self.btn_lm = QtGui.QPushButton("Load model")
 		self.btn_lm.resize(self.btn_lm.minimumSizeHint())
 		self.btn_lm.setObjectName("Load model")
 		self.btn_lm.setFont(self.newFont)
 		self.btn_lm.move(0, 100)
 
-		self.btn_wm = QtGui.QPushButton("Write model", self)
+		self.btn_wm = QtGui.QPushButton("Write model")
 		self.btn_wm.resize(self.btn_wm.minimumSizeHint())
 		self.btn_wm.setObjectName("Write model")
 		self.btn_wm.setFont(self.newFont)
 		self.btn_wm.move(0, 100)
 
-		self.btn_u = QtGui.QPushButton("Undo last demo", self)
+		self.btn_u = QtGui.QPushButton("Undo last demo")
 		self.btn_u.resize(self.btn_u.minimumSizeHint())
 		self.btn_u.setObjectName("Undo last demo")
 		self.btn_u.setFont(self.newFont)
 		self.btn_u.move(0, 100)
 
-		self.btn_rd = QtGui.QPushButton("Redo last undone", self)
+		self.btn_rd = QtGui.QPushButton("Redo last undone")
 		self.btn_rd.resize(self.btn_rd.minimumSizeHint())
 		self.btn_rd.setObjectName("Redo last undone")
 		self.btn_rd.setFont(self.newFont)
@@ -343,6 +368,27 @@ class Home(QtGui.QWidget):
 		self.vlayout.addWidget(self.btn_wm)
 		self.vlayout.addWidget(self.btn_u)
 		self.vlayout.addWidget(self.btn_rd)
+
+		# Other options
+		self.options_label = QtGui.QLabel()
+		self.options_label.setText("Other options:")
+		self.options_label.setFont(self.menu_font)
+
+		self.vlayout.addWidget(self.options_label)
+		self.vlayout.addStretch()
+
+		self.btn_load = QtGui.QPushButton("Load configure file")
+		self.btn_load.resize(self.btn_load.minimumSizeHint())
+		self.btn_load.setFont(self.newFont)
+		self.btn_load.move(0, 100)
+
+		self.btn_quit = QtGui.QPushButton("Quit")
+		self.btn_quit.resize(self.btn_quit.minimumSizeHint())
+		self.btn_quit.setFont(self.newFont)
+		self.btn_quit.move(0, 100)
+
+		self.vlayout.addWidget(self.btn_load)
+		self.vlayout.addWidget(self.btn_quit)
 
 		# Set up the layout
 		self.setLayout(self.vlayout)
@@ -398,19 +444,6 @@ class ExecuteInterface(QtGui.QWidget):
 		self.interrupt_btn.setFont(self.newFont)
 		self.interrupt_btn.resize(self.interrupt_btn.sizeHint())
 		self.vlayout.addWidget(self.interrupt_btn)
-
-		# self.vlayout.addStretch()
-
-		# # Label
-		# self.back_label = QtGui.QLabel()
-		# self.back_label.setText("Go Back:")
-		# self.back_label.setFont(self.menu_font)
-		# self.vlayout.addWidget(self.back_label)
-
-		# self.back_btn = QtGui.QPushButton('Go back')
-		# self.back_btn.setFont(self.newFont)
-		# self.back_btn.resize(self.back_btn.sizeHint())
-		# self.vlayout.addWidget(self.back_btn)
 
 		self.setLayout(self.vlayout)
 
@@ -480,8 +513,6 @@ class execThread(threading.Thread):
 		while not self.interrupt_flag:
 			self.lfd.execute()
 			self.sleep_rate.sleep()
-
-
 
 def main():
 	app = QtGui.QApplication(sys.argv)

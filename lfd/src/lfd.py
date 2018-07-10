@@ -98,9 +98,9 @@ class LfD:
             4: Action('tuck', BuildTuckWithCondBehavior),
             5: Action('place', BuildPlaceBehavior),
             6: Action('look_strait', BuildHeadMoveBehavior),
-            7: Action('say hello', BuildTTSBehavior, 'hello'),
-            8: Action('update_joints', BuildUpdateJointsBehavior),
-            9: Action('relative forward', BuildRelativeMoveBehavior, None, 0.5, 'forward')
+            7: Action('update_joints', BuildUpdateJointsBehavior),
+            8: Action('relative forward', BuildRelativeMoveBehavior, None, 0.5, 'forward')
+            9: Action('say hello', BuildTTSBehavior, 'hello')
         }
         self.action_names = {}
         self.action_indices = {}

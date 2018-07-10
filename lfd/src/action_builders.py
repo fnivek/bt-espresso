@@ -81,3 +81,9 @@ def BuildRelativeMoveBehavior(name, amp=0.5, direction='forward'):
         return TurnInPlaceBehavior(name, amp)
     else:
         return None
+# Hardcoded behavior for grocery bag packing task
+# TODO: Add condition checking with the behavior
+def BuildNavToBagBehavior(name):
+    return NavToPoseBehavior(name=name, param_server_name='/grocery_bag_packing/pose_grocery_bag')
+def BuildNavToItemsBehavior(name):
+    return NavToPoseBehavior(name=name, param_server_name='/grocery_bag_packing/pose_items')    
