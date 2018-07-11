@@ -7,6 +7,8 @@ import threading
 import time
 import rospy
 import subprocess
+import rosparam
+import yaml
 
 class LfDGui(QtGui.QMainWindow):
 
@@ -127,11 +129,11 @@ class LfDGui(QtGui.QMainWindow):
 	def display_exec(self):
 		# Execute interface layout
 		exec_interface = ExecuteInterface()
-		
+
 		# Add connections
 		exec_interface.interrupt_btn.clicked.connect(self.interrupt_exec)
 		# exec_interface.back_btn.clicked.connect(self.display_home)
-		
+
 		# Show the layout
 		self.setCentralWidget(exec_interface)
 		self.show()
@@ -175,14 +177,14 @@ class LfDGui(QtGui.QMainWindow):
 
 	def load_config_file(self):
 		# Load the configure file through cmd line
-		# Hard-code the path of config file
-		os.chdir(os.path.expanduser('~/catkin_ws/src/mobile_manipulation/lfd/lfd/config/cfgs'))
-		new_proc = subprocess.Popen(['rosparam', 'load', 'lfd_configs.yaml'])
-		new_proc.wait()
-		os.chdir(os.path.expanduser('~/catkin_ws'))
+		name = QtGui.QFileDialog.getOpenFileName(self, 'Open File', filter='*.yaml')
+		yaml_file = open(name[0], 'r')
+		yaml_data = yaml.load(yaml_file)
+		yaml_file.close()
+		rosparam.upload_params('/', yaml_data)
 		self.add_nav_behavior()
 		QtGui.QMessageBox.information(self, 'Success', 'Success in loading configure file and adding nav behavior!')
-		
+
 
 	def redo_cb(self):
 		if self.lfd.redo_states is not None and len(self.lfd.redo_states) != 0:
@@ -208,12 +210,12 @@ class LfDGui(QtGui.QMainWindow):
 
 	def writemodel_cb(self):
 		name = QtGui.QFileDialog.getSaveFileName(self, 'Save File')
-		pickle.dump(self.lfd.clf, open(name, 'wb'))
+		pickle.dump(self.lfd.clf, open(name[0], 'wb'))
 		QtGui.QMessageBox.information(self, 'Success', 'Success in saving the model!')
 
 	def loadmodel_cb(self):
 		name = QtGui.QFileDialog.getOpenFileName(self, 'Open File')
-		self.lfd.clf = pickle.load(open(name, 'rb'))
+		self.lfd.clf = pickle.load(open(name[0], 'rb'))
 		self.lfd.render_model()
 		QtGui.QMessageBox.information(self, 'Success', 'Success in loading the model!')
 
@@ -230,7 +232,7 @@ class LfDGui(QtGui.QMainWindow):
 		else:
 			execute_flag = False
 		if execute_flag == False:
-			QtGui.QMessageBox.warning(self,"Error",  
+			QtGui.QMessageBox.warning(self,"Error",
                              self.tr("The robot haven't learned anything yet!"))
 		else:
 			# Shut down the currently active executing thread
@@ -274,8 +276,8 @@ class LfDGui(QtGui.QMainWindow):
 		QtGui.QMessageBox.information(self, 'Success', 'Success in performing ' + action_name +'!')
 
 	def closeEvent(self, event):
-		choice = QtGui.QMessageBox.question(self, 'Exit Prompt', 
-											"Do you want to close LfD Gui?", 
+		choice = QtGui.QMessageBox.question(self, 'Exit Prompt',
+											"Do you want to close LfD Gui?",
 											QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
 		if choice == QtGui.QMessageBox.Yes:
 			# Shut down the active executing thread
@@ -520,4 +522,5 @@ def main():
 	sys.exit(app.exec_())
 
 if __name__ == '__main__':
+	os.chdir(os.path.expanduser('~/catkin_ws/src/mobile_manipulation/lfd'))
 	main()
