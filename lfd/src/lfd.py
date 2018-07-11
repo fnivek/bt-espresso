@@ -99,7 +99,7 @@ class LfD:
             5: Action('place', BuildPlaceBehavior),
             6: Action('look_strait', BuildHeadMoveBehavior),
             7: Action('update_joints', BuildUpdateJointsBehavior),
-            8: Action('relative forward', BuildRelativeMoveBehavior, None, 0.5, 'forward')
+            8: Action('relative forward', BuildRelativeMoveBehavior, None, 0.5, 'forward'),
             9: Action('say hello', BuildTTSBehavior, 'hello')
         }
         self.action_names = {}
@@ -421,9 +421,10 @@ class LfD:
         # Build the root
         #   The root is a sequence node that first writes the current state to the blackboard then
         #       Runs the behavior tree
-        root = py_trees.composites.Sequence(name='root')
+        root = py_trees.composites.Parallel(name='root')
         # state_to_bb = StateToBB(name='state_to_bb')
         # root.add_child(state_to_bb)
+        root.add_child(JointToBlackboardBehavior(name='joint_to_bb', topic_name='/joint_states', topic_type=JointState))
 
         # Build the tree from dt.tree_
         #   The decision tree is stored in a few arrays of size node_count
@@ -432,7 +433,7 @@ class LfD:
         #   threshold - the value to threshold on feat <= thres
         #   feature - the feature to split on
         #   value - the node_count by n_outputs=1, max_n_classes array containing the output
-        def build_bt(dt, node_id, parent):
+        def build_bt(dt, node_id):
             """Recursive function for buiding the BT."""
 
             # Get info from dt
@@ -447,7 +448,7 @@ class LfD:
                 text = self.actions[class_index].text
                 amp = self.actions[class_index].amp
                 direction = self.actions[class_index].direction
-                
+
                 # action = self.actions[class_index].get_builder()(name)
 
                 if text != None:
@@ -460,7 +461,7 @@ class LfD:
                     action = self.actions[class_index].get_builder()(name=name, direction=direction)
                 else:
                     action = self.actions[class_index].get_builder()(name)
-                parent.add_child(action)
+                return action
             else:
                 # Decision node
                 #                      ?
@@ -490,15 +491,19 @@ class LfD:
                 )
 
                 # Construct tree
-                parent.add_child(sel)
                 sel.add_children([seq_true, seq_false])
-                seq_true.add_child(cond_true)
-                seq_false.add_child(cond_false)
-                build_bt(dt, left_child, seq_true)
-                build_bt(dt, right_child, seq_false)
+                seq_true.add_children([
+                    cond_true,
+                    build_bt(dt, left_child)
+                ])
+                seq_false.add_children([
+                    cond_false,
+                    build_bt(dt, right_child)
+                ])
 
+                return sel
 
-        build_bt(dt, 0, root)
+        root.add_child(build_bt(dt, 0))
 
         tree = py_trees_ros.trees.BehaviourTree(root)
         tree.visitors.append(LastActionVisitor(self))
