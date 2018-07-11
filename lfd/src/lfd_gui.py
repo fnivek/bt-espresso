@@ -182,8 +182,10 @@ class LfDGui(QtGui.QMainWindow):
 		yaml_data = yaml.load(yaml_file)
 		yaml_file.close()
 		rosparam.upload_params('/', yaml_data)
-		self.add_nav_behavior()
-		QtGui.QMessageBox.information(self, 'Success', 'Success in loading configure file and adding nav behavior!')
+		# Check whether the nav actions have been created
+		if 'nav_to_bag' not in self.lfd.action_indices or 'nav_to_items' not in self.lfd.action_indices:
+			self.add_nav_behavior()
+		QtGui.QMessageBox.information(self, 'Success', 'Success in loading configure file for nav behavior!')
 
 
 	def redo_cb(self):
