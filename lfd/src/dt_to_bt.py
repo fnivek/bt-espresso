@@ -22,6 +22,15 @@ class BTNode:
 
     A simple structure to represent a node in a behavior tree.
 
+    Params:
+        name: A name for the node
+        node_type: the type of behavior tree node (see enumerated types bellow)
+        children: a list of children
+        user_id: an identifier provided by the user that indicates the condition or the action,
+            associated with the node, this will be none for flow control nodes
+        neg_cond: True a condition node should be left as is, False a condition node should be,
+            negated
+
     """
     # Enumerate the types of nodes
     FALLBACK = 'fallback'
@@ -29,17 +38,23 @@ class BTNode:
     ACTION = 'action'
     CONDITION = 'condition'
 
-    def __init__(self, name='', node_type=None, children=None):
+    def __init__(self, name='', node_type=None, children=None, user_id=None, neg_cond=False):
         self.name = name
         self.node_type = node_type
         if children is None:
             self.children = []
+        self.user_id = user_id
+        self.neg_cond = neg_cond
 
     def add_child(self, child):
         self.children.append(child)
 
     def __str__(self):
-        text = '{0}({1})\n'.format(self.name, self.node_type)
+        text = '{0}({1}{2})\n'.format(
+            self.name,
+            '~' if self.neg_cond else '',
+            self.node_type
+        )
         for child in self.children:
             child_text = str(child)
             first = True
@@ -68,8 +83,12 @@ def min_sop_to_bt_cond(min_sop):
     for minterm in min_sop:
         and_node = BTNode('and', BTNode.SEQUENCE)
         for cond in minterm:
-            not_txt = '' if cond[1] else '~'
-            cond_node = BTNode('cond_{0}{1}'.format(not_txt, cond[0]), BTNode.CONDITION)
+            cond_node = BTNode(
+                'cond_{0}{1}'.format('' if cond[1] else '~', cond[0]),
+                BTNode.CONDITION,
+                user_id=cond[0],
+                neg_cond=not cond[1]
+            )
             and_node.add_child(cond_node)
         or_node.add_child(and_node)
 
@@ -95,7 +114,7 @@ def min_sops_to_bt(min_sops):
         # Define nodes
         seq = BTNode('seq', BTNode.SEQUENCE)
         cond = min_sop_to_bt_cond(sop)
-        act = BTNode('act_{0}'.format(clf), BTNode.ACTION)
+        act = BTNode('act_{0}'.format(clf), BTNode.ACTION, user_id=clf)
         # Build tree
         seq.add_child(cond)
         seq.add_child(act)
@@ -155,8 +174,8 @@ def simple_dt_to_bt(true_children, false_children, clf, node_id=0):
         fall = BTNode('fall', BTNode.FALLBACK)
         seq_true = BTNode('seq_true', BTNode.SEQUENCE)
         seq_false = BTNode('seq_false', BTNode.SEQUENCE)
-        cond_true = BTNode('cond_{0}'.format(node_id), BTNode.CONDITION)
-        cond_false = BTNode('cond_~{0}'.format(node_id), BTNode.CONDITION)
+        cond_true = BTNode('cond_{0}'.format(node_id), BTNode.CONDITION, user_id=node_id)
+        cond_false = BTNode('cond_~{0}'.format(node_id), BTNode.CONDITION, user_id=node_id, neg_cond=True)
 
         # Construct tree
         fall.add_child(seq_true)
