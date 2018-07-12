@@ -2,9 +2,13 @@
   <include file="$(find manipulation)/launch/manipulation.launch"/>
   <include file="$(find centroid_detector)/launch/centroid_detector.launch"/>
   <include file="$(find head_move)/launch/head_move.launch"/>
-
+  <node name="grab_bag" pkg="fetch_manipulation_pipeline" type="grab_bag" respawn="true" output="screen"/>
   <!-- Behavior tree gui -->
   <node name="rqt_py_trees" pkg="rqt_py_trees" type="rqt_py_trees"/>
+
+  <!-- Load recorded trajectories -->
+  <rosparam file="$(find lfd)/config/Lfd_Final_Part.yaml" command="load" />
+  <rosparam file="$(find lfd)/config/Lfd_Retrieve.yaml" command="load" />
 
   <!-- lfd gui version -->
   <node name="lfd" pkg="lfd" type="lfd_gui.py" output="screen"/>

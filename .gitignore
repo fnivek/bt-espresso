@@ -3,7 +3,7 @@
 #######################################
 nvidia-docker-compose.yml
 media/
-config/
+config/item_locations.yaml
 
 #######################################
 # C++
