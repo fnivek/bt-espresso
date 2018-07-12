@@ -38,6 +38,21 @@ class BTNode:
     def add_child(self, child):
         self.children.append(child)
 
+    def __str__(self):
+        text = '{0}({1})\n'.format(self.name, self.node_type)
+        for child in self.children:
+            child_text = str(child)
+            first = True
+            for row in child_text.splitlines():
+                if first:
+                    text += '  |-->{0}\n'.format(row)
+                    first = False
+                else:
+                    text += '  |  {0}\n'.format(row)
+
+        return text
+
+
 def min_sop_to_bt_cond(min_sop):
     """Convert a minimum sop to a behavior tree condition.
 
