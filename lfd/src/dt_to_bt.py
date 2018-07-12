@@ -68,7 +68,8 @@ def min_sop_to_bt_cond(min_sop):
     for minterm in min_sop:
         and_node = BTNode('and', BTNode.SEQUENCE)
         for cond in minterm:
-            cond_node = BTNode('cond_{0}'.format(cond), BTNode.CONDITION)
+            not_txt = '' if cond[1] else '~'
+            cond_node = BTNode('cond_{0}{1}'.format(not_txt, cond[0]), BTNode.CONDITION)
             and_node.add_child(cond_node)
         or_node.add_child(and_node)
 
