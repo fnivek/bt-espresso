@@ -105,14 +105,68 @@ def min_sops_to_bt(min_sops):
 def dt_to_bt(true_children, false_children, clf):
     """Convert a decision tree to a minimum sum of product representation.
 
-    inputs:
+    Inputs:
         true_children: TODO(Allen).
         false_children: TODO(Allen).
         clf: TODO(Allen).
-    outputs:
+    Outputs:
         TODO(Allen).
 
     """
     min_sops = dt_to_min_sop(true_children, false_children, clf)
     bt = min_sops_to_bt(min_sops)
     return bt
+
+
+def simple_dt_to_bt(true_children, false_children, clf, node_id=0):
+    """Convert a decision tree to a behavior tree.
+
+    This is a recursive algorithm that directly converts the structures in a
+    decision tree into a behavior tree.
+
+    Inputs:
+        true_children: TODO(Allen).
+        false_children: TODO(Allen).
+        clf: TODO(Allen).
+        node_id: the current node id in the decision tree to be processing,
+            this should be 0 to start from the root
+    Outputs:
+        TODO(Allen).
+
+    """
+
+    # Get info from dt
+    true_child = true_children[node_id]
+    right_child = false_children[node_id]
+
+    # Check if leaf node or decision node
+    if true_child == -1 or right_child == -1:
+        return BTNode('act_{0}'.format(clf[node_id]), BTNode.ACTION)
+    else:
+        # Decision node
+        #                      ?
+        #        +-------------|------------+
+        #       ->                         ->
+        #     +--|-------+               +--|-------+
+        #   cond   true_sub_tree       !cond  false_sub_tree
+
+        # Define nodes
+        fall = BTNode('fall', BTNode.FALLBACK)
+        seq_true = BTNode('seq_true', BTNode.SEQUENCE)
+        seq_false = BTNode('seq_false', BTNode.SEQUENCE)
+        cond_true = BTNode('cond_{0}'.format(node_id), BTNode.CONDITION)
+        cond_false = BTNode('cond_~{0}'.format(node_id), BTNode.CONDITION)
+
+        # Construct tree
+        fall.add_child(seq_true)
+        fall.add_child(seq_false)
+        seq_true.add_child(cond_true)
+        seq_true.add_child(
+            simple_dt_to_bt(true_children, false_children, clf, true_children[node_id])
+        )
+        seq_false.add_child(cond_false)
+        seq_false.add_child(
+            simple_dt_to_bt(true_children, false_children, clf, false_children[node_id])
+        )
+
+        return fall
