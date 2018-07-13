@@ -26,12 +26,19 @@ class GrabBagBehavior(py_trees_ros.actions.ActionClient):
         super(GrabBagBehavior, self).initialise()
         # Get two points from blackboard
         blackboard = py_trees.blackboard.Blackboard()
-        # points = blackboard.get('centroid')
+        front_point = blackboard.get('front_handle')
+        back_point = blackboard.get('back_handle')
+
+        if front_point is None:
+            rospy.logerr('handle points was not defined for grab bag behavior')
+            self.action_goal = fetch_manipulation_pipeline.msg.GrabBagGoal()
+            return
 
         # x1, y1 is the back handle. (x2, y2) is the front handle
-        # x1=, y1=, x2=, y2=
+        x1, y1, z1 = back_point
+        x2, y2, z2 = front_point
 
-        centroid = Pose()
+        pose_ = Pose()
 
         # Calculate angles from the two points of the handles.
         x = 90
@@ -40,30 +47,26 @@ class GrabBagBehavior(py_trees_ros.actions.ActionClient):
 
         # Calculate quaternions from the angles.
         quaternion = tf.transformations.quaternion_from_euler(radians(x), y, 0, 'rxyz')
-        centroid.orientation.x = quaternion[0]
-        centroid.orientation.y = quaternion[1]
-        centroid.orientation.z = quaternion[2]
-        centroid.orientation.w = quaternion[3]
+        pose_.orientation.x = quaternion[0]
+        pose_.orientation.y = quaternion[1]
+        pose_.orientation.z = quaternion[2]
+        pose_.orientation.w = quaternion[3]
 
         # Set grasp pose
-        grasp_pose = deepcopy(centroid)
+        grasp_pose = deepcopy(pose_)
         # Set pre-grasp pose
-        pre_grasp_pose = deepcopy(centroid);
+        pre_grasp_pose = deepcopy(pose_);
 
         # Offset
         grasp_pose.position.x = x1 - 0.08 * cos(y)
         grasp_pose.position.y = y1 - 0.08 * cos(y)
-        grasp_pose.position.z = 0.88
+        grasp_pose.position.z = (z1 + z2) / 2.0
 
         # Offset
         pre_grasp_pose.position.x = x2 - 0.25 * cos(y)
         pre_grasp_pose.position.y = y2 - 0.25 * sin(y)
-        pre_grasp_pose.position.z = 0.88
+        pre_grasp_pose.position.z = (z1 + z2) / 2.0
 
-        if centroid is None:
-            rospy.logerr('Either centroid or shelf was not defined for grab bag behavior')
-            self.action_goal = fetch_manipulation_pipeline.msg.GrabBagGoal()
-            return
 
         # Set the action goal
         self.action_goal.grasp_pose = grasp_pose
