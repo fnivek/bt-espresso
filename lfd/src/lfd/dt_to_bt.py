@@ -259,7 +259,7 @@ def simple_dt_to_bt(true_children, false_children, clf, node_id=0):
 
     # Check if leaf node or decision node
     if true_child == -1 or right_child == -1:
-        return BTNode('act_{0}'.format(clf[node_id]), BTNode.ACTION)
+        return BTNode('act_{0}'.format(clf[node_id]), BTNode.ACTION, user_id=clf[node_id])
     else:
         # Decision node
         #                      ?
