@@ -13,18 +13,12 @@ from behavior_manager.interfaces.update_joints_behavior import JointToBlackboard
 from behavior_manager.interfaces.navigation_behavior import *
 
 class Action:
-    def __init__(self, name, builder, text=None, amp=None, direction=None):
+    def __init__(self, name, builder, *builder_args, **builder_kwargs):
         self.name = name
         self.builder = builder
-        self.text = text
-        self.amp = amp
-        self.direction = direction
-        if text != None:
-            self.action = builder(name, text)
-        elif amp != None and direction != None:
-            self.action = builder(name, amp, direction)
-        else:
-            self.action = builder(name)
+        self.builder_args = builder_args
+        self.builder_kwargs = builder_kwargs
+        self.action = builder(name, *builder_args, **builder_kwargs)
         self.action.setup(timeout=30)
 
     def run_once(self):

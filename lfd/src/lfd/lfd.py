@@ -25,6 +25,7 @@ import py_trees
 import py_trees_ros
 
 from action_builders import *
+import dt_to_bt
 
 def shutdown(tree):
     """Stop the tree."""
@@ -99,8 +100,8 @@ class LfD:
             5: Action('place', BuildPlaceBehavior),
             6: Action('look_strait', BuildHeadMoveBehavior),
             7: Action('update_joints', BuildUpdateJointsBehavior),
-            8: Action('relative forward', BuildRelativeMoveBehavior, None, 0.5, 'forward'),
-            9: Action('say hello', BuildTTSBehavior, 'hello')
+            8: Action('relative forward', BuildRelativeMoveBehavior, amp=0.5, direction='forward'),
+            9: Action('say hello', BuildTTSBehavior, text='hello')
         }
         self.action_names = {}
         self.action_indices = {}
@@ -193,7 +194,7 @@ class LfD:
     def render_model(self):
         if self.tree is not None:
             self.tree.blackboard_exchange.unregister_services()
-        self.tree = self.dt_to_bt(self.clf)
+        self.tree = self.get_bt(self.clf)
         dot_data = tree.export_graphviz(
             self.clf,
             out_file=None,
@@ -416,14 +417,60 @@ class LfD:
             # Sleep if needed
             sleep_rate.sleep()
 
-    def dt_to_bt(self, dt):
+    def construct_bt(self, struct, dt):
+        """Convert a bt structure into a real bt.
+
+        Inputs:
+            struct: stucture of the bt in dt_to_bt.BTNode form.
+            dt: The scipy decision tree structure
+        Outputs:
+            bt: A behavior tree
+
+        """
+        # Build this bt node
+        bt = None
+        if struct.node_type == dt_to_bt.BTNode.FALLBACK:
+            bt = py_trees.composites.Selector(struct.name)
+        if struct.node_type == dt_to_bt.BTNode.SEQUENCE:
+            bt = py_trees.composites.Sequence(struct.name)
+        if struct.node_type == dt_to_bt.BTNode.ACTION:
+            name = self.action_names[struct.user_id]
+            action = self.actions[struct.user_id]
+            bt = action.get_builder()(name, *action.builder_args, **action.builder_kwargs)
+        if struct.node_type == dt_to_bt.BTNode.CONDITION:
+            # Get info from dt
+            feature_name = self.feature_names[dt.tree_.feature[struct.user_id]]
+            thres = dt.tree_.threshold[struct.user_id]
+
+            # Negate if needed
+            name = 'cond_{0}_{1}{2}{3:.3f}'
+            op = operator.le
+            op_str = '<='
+            if struct.neg_cond:
+                op = operator.gt
+                op_str = '>'
+
+            # Build condition
+            bt = py_trees.blackboard.CheckBlackboardVariable(
+                name=name.format(struct.user_id, feature_name, op_str, thres),
+                variable_name=feature_name,
+                expected_value=thres,
+                comparison_operator=op
+            )
+
+        # Construct all its children
+        for child in struct.children:
+            child_bt = self.construct_bt(child, dt)
+            bt.add_child(child_bt)
+
+        return bt
+
+    def get_bt(self, dt):
         """Convert a decision tree to a behavior tree."""
         # Build the root
         #   The root is a sequence node that first writes the current state to the blackboard then
         #       Runs the behavior tree
         root = py_trees.composites.Parallel(name='root')
-        # state_to_bb = StateToBB(name='state_to_bb')
-        # root.add_child(state_to_bb)
         root.add_child(JointToBlackboardBehavior(name='joint_to_bb', topic_name='/joint_states', topic_type=JointState))
 
         # Build the tree from dt.tree_
@@ -433,77 +480,17 @@ class LfD:
         #   threshold - the value to threshold on feat <= thres
         #   feature - the feature to split on
         #   value - the node_count by n_outputs=1, max_n_classes array containing the output
-        def build_bt(dt, node_id):
-            """Recursive function for buiding the BT."""
+        clf = [
+            dt.classes_[numpy.argmax(dt.tree_.value[node_id][0])]
+            for node_id in xrange(len(dt.tree_.children_left))
+        ]
+        bt_struct = dt_to_bt.dt_to_bt(
+            true_children=dt.tree_.children_left,
+            false_children=dt.tree_.children_right,
+            clf=clf
+        )
 
-            # Get info from dt
-            left_child = dt.tree_.children_left[node_id]
-            right_child = dt.tree_.children_right[node_id]
-
-            # Check if leaf node or decision node
-            if left_child == -1 or right_child == -1:
-                # Leaf node
-                class_index = dt.classes_[numpy.argmax(dt.tree_.value[node_id][0])]
-                name = self.action_names[class_index]
-                text = self.actions[class_index].text
-                amp = self.actions[class_index].amp
-                direction = self.actions[class_index].direction
-
-                # action = self.actions[class_index].get_builder()(name)
-
-                if text != None:
-                    action = self.actions[class_index].get_builder()(name, text)
-                elif amp != None and direction != None:
-                    action = self.actions[class_index].get_builder()(name=name, amp=amp, direction=direction)
-                elif amp != None and direction == None:
-                    action = self.actions[class_index].get_builder()(name=name, amp=amp)
-                elif amp == None and direction != None:
-                    action = self.actions[class_index].get_builder()(name=name, direction=direction)
-                else:
-                    action = self.actions[class_index].get_builder()(name)
-                return action
-            else:
-                # Decision node
-                #                      ?
-                #        +-------------|------------+
-                #       ->                         ->
-                #     +--|-------+               +--|-------+
-                #   cond   true_sub_tree       !cond  false_sub_tree
-                # Get info from dt
-                feature_name = self.feature_names[dt.tree_.feature[node_id]]
-                thres = dt.tree_.threshold[node_id]
-
-                # Define nodes
-                sel = py_trees.composites.Selector('sel_' + str(node_id))
-                seq_true = py_trees.composites.Sequence('seq_true_' + str(node_id))
-                seq_false = py_trees.composites.Sequence('seq_false_' + str(node_id))
-                cond_true = py_trees.blackboard.CheckBlackboardVariable(
-                    name='cond_{0}_{1}<={2}'.format(node_id, feature_name, thres),
-                    variable_name=feature_name,
-                    expected_value=thres,
-                    comparison_operator=operator.le
-                )
-                cond_false = py_trees.blackboard.CheckBlackboardVariable(
-                    name='cond_{0}_{1}>{2}'.format(node_id, feature_name, thres),
-                    variable_name=feature_name,
-                    expected_value=thres,
-                    comparison_operator=operator.gt
-                )
-
-                # Construct tree
-                sel.add_children([seq_true, seq_false])
-                seq_true.add_children([
-                    cond_true,
-                    build_bt(dt, left_child)
-                ])
-                seq_false.add_children([
-                    cond_false,
-                    build_bt(dt, right_child)
-                ])
-
-                return sel
-
-        root.add_child(build_bt(dt, 0))
+        root.add_child(self.construct_bt(bt_struct, dt))
 
         tree = py_trees_ros.trees.BehaviourTree(root)
         tree.visitors.append(LastActionVisitor(self))
