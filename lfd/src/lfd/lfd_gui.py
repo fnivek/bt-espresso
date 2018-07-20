@@ -230,7 +230,7 @@ class LfDGui(QtGui.QMainWindow):
 
 	def execute_cb(self):
 
-		if self.lfd.demo_actions != None:
+		if self.lfd.tree != None:
 			execute_flag = True
 		else:
 			execute_flag = False
