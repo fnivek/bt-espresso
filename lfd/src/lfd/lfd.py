@@ -465,7 +465,7 @@ class LfD:
 
         return bt
 
-    def get_bt(self, dt):
+    def get_bt(self, dt, simple_algo=False):
         """Convert a decision tree to a behavior tree."""
         # Build the root
         #   The root is a sequence node that first writes the current state to the blackboard then
@@ -484,11 +484,18 @@ class LfD:
             dt.classes_[numpy.argmax(dt.tree_.value[node_id][0])]
             for node_id in xrange(len(dt.tree_.children_left))
         ]
-        bt_struct = dt_to_bt.dt_to_bt(
-            true_children=dt.tree_.children_left,
-            false_children=dt.tree_.children_right,
-            clf=clf
-        )
+        if simple_algo:
+            bt_struct = dt_to_bt.simple_dt_to_bt(
+                true_children=dt.tree_.children_left,
+                false_children=dt.tree_.children_right,
+                clf=clf
+            )
+        else:
+            bt_struct = dt_to_bt.dt_to_bt(
+                true_children=dt.tree_.children_left,
+                false_children=dt.tree_.children_right,
+                clf=clf
+            )
 
         root.add_child(self.construct_bt(bt_struct, dt))
 

@@ -249,13 +249,19 @@ def min_sops_to_bt(min_sops):
     # Loop through all sops
     for clf, sop in min_sops.iteritems():
         # Define nodes
-        seq = BTNode('seq', BTNode.SEQUENCE)
         cond = min_sop_to_bt_cond(sop)
         act = BTNode('act_{0}'.format(clf), BTNode.ACTION, user_id=clf)
         # Build tree
-        seq.add_child(cond)
-        seq.add_child(act)
-        root.add_child(seq)
+        # If the return cond node is a seq node, omit seq node here
+        if cond.node_type == BTNode.SEQUENCE:
+            cond.name = 'seq'
+            cond.add_child(act)
+            root.add_child(cond)
+        else:
+            seq = BTNode('seq', BTNode.SEQUENCE)
+            seq.add_child(cond)
+            seq.add_child(act)
+            root.add_child(seq)
 
     return root
 
