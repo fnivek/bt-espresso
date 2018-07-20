@@ -196,7 +196,7 @@ class LfD:
     def render_model(self):
         if self.tree is not None:
             self.tree.blackboard_exchange.unregister_services()
-        self.tree = self.get_bt(self.clf)
+        self.tree = self.get_bt(dt=self.clf, simple_algo=True)
         dot_data = tree.export_graphviz(
             self.clf,
             out_file=None,
