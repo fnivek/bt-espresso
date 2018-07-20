@@ -11,6 +11,8 @@ from behavior_manager.interfaces.head_actuate_behavior import HeadMoveBehavior
 from behavior_manager.interfaces.tts_behavior import TTSBehavior
 from behavior_manager.interfaces.update_joints_behavior import JointToBlackboardBehavior
 from behavior_manager.interfaces.navigation_behavior import *
+from behavior_manager.interfaces.detect_handles_behavior import DetectHandlesBehavior
+from behavior_manager.interfaces.grab_bag_behavior import GrabBagBehavior
 
 class Action:
     def __init__(self, name, builder, *builder_args, **builder_kwargs):
@@ -80,3 +82,7 @@ def BuildNavToBagBehavior(name):
     return NavToPoseWithCondBehavior(name=name, param_server_name='/grocery_bag_packing/pose_grocery_bag')
 def BuildNavToItemsBehavior(name):
     return NavToPoseWithCondBehavior(name=name, param_server_name='/grocery_bag_packing/pose_items')
+def BuildBagDetectBehavior(name):
+    return DetectHandlesBehavior(name)
+def BuildBagGrabBehavior(name):
+    return GrabBagBehavior(name)
