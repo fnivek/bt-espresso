@@ -6,9 +6,9 @@ from PyQt4 import QtGui, QtCore
 import threading
 import time
 import rospy
-import subprocess
 import rosparam
 import yaml
+import os
 
 class LfDGui(QtGui.QMainWindow):
 
@@ -54,6 +54,8 @@ class LfDGui(QtGui.QMainWindow):
 		# Set up button connections
 		home_layout.btn_d.clicked.connect(self.display_action)
 		home_layout.btn_l.clicked.connect(self.learn_cb)
+		home_layout.btn_e_dt.clicked.connect(self.execute_cb)
+		home_layout.btn_e_sim.clicked.connect(self.execute_cb)
 		home_layout.btn_e.clicked.connect(self.execute_cb)
 		home_layout.btn_r.clicked.connect(self.display_action)
 		home_layout.btn_lm.clicked.connect(self.loadmodel_cb)
@@ -132,7 +134,6 @@ class LfDGui(QtGui.QMainWindow):
 
 		# Add connections
 		exec_interface.interrupt_btn.clicked.connect(self.interrupt_exec)
-		# exec_interface.back_btn.clicked.connect(self.display_home)
 
 		# Show the layout
 		self.setCentralWidget(exec_interface)
@@ -187,7 +188,6 @@ class LfDGui(QtGui.QMainWindow):
 			self.add_nav_behavior()
 		QtGui.QMessageBox.information(self, 'Success', 'Success in loading configure file for nav behavior!')
 
-
 	def redo_cb(self):
 		if self.lfd.redo_states is not None and len(self.lfd.redo_states) != 0:
 			# print self.demo_states
@@ -213,6 +213,7 @@ class LfDGui(QtGui.QMainWindow):
 	def writemodel_cb(self):
 		name = QtGui.QFileDialog.getSaveFileName(self, 'Save File')
 		pickle.dump(self.lfd.clf, open(name[0], 'wb'))
+		# pickle.dump(self.lfd.clf, open(str(name), 'wb'))
 		QtGui.QMessageBox.information(self, 'Success', 'Success in saving the model!')
 
 	def loadmodel_cb(self):
@@ -241,11 +242,10 @@ class LfDGui(QtGui.QMainWindow):
 			if self.executingThread != None:
 				self.executingThread.interrupt_flag = True
 				self.executingThread = None
-
 			# Show the interface
 			self.display_exec()
 			# Create a new thread for ticking the tree
-			self.executingThread = execThread('execThread', self.lfd)
+			self.executingThread = execThread('execThread', self.lfd, self.sender().objectName())
 			self.executingThread.start()
 
 	def interrupt_exec(self):
@@ -328,6 +328,21 @@ class Home(QtGui.QWidget):
 		self.btn_l.setFont(self.newFont)
 		self.btn_l.move(0, 100)
 
+		# Button for decision tree method
+		self.btn_e_dt = QtGui.QPushButton("Execute_dt")
+		self.btn_e_dt.resize(self.btn_e_dt.minimumSizeHint())
+		self.btn_e_dt.setObjectName("Execute_dt")
+		self.btn_e_dt.setFont(self.newFont)
+		self.btn_e_dt.move(0, 100)
+
+		# Button for simple behavior tree method
+		self.btn_e_sim = QtGui.QPushButton("Execute_simple_algo")
+		self.btn_e_sim.resize(self.btn_e_sim.minimumSizeHint())
+		self.btn_e_sim.setObjectName("Execute_simple_algo")
+		self.btn_e_sim.setFont(self.newFont)
+		self.btn_e_sim.move(0, 100)
+
+		# Button for behavior tree method
 		self.btn_e = QtGui.QPushButton("Execute")
 		self.btn_e.resize(self.btn_e.minimumSizeHint())
 		self.btn_e.setObjectName("Execute")
@@ -366,6 +381,8 @@ class Home(QtGui.QWidget):
 
 		self.vlayout.addWidget(self.btn_d)
 		self.vlayout.addWidget(self.btn_l)
+		self.vlayout.addWidget(self.btn_e_dt)
+		self.vlayout.addWidget(self.btn_e_sim)
 		self.vlayout.addWidget(self.btn_e)
 		self.vlayout.addWidget(self.btn_r)
 		self.vlayout.addWidget(self.btn_lm)
@@ -505,18 +522,36 @@ class TTSInterface(QtGui.QWidget):
 
 class execThread(threading.Thread):
 
-	def __init__(self, name, lfd):
+	def __init__(self, name, lfd, mode):
 		threading.Thread.__init__(self)
 		self.name = name
 		self.lfd = lfd
+		self.mode = mode
 		# Hard code the ticking rate
 		self.sleep_rate = rospy.Rate(10)
 		self.interrupt_flag = False
 
 	def run(self):
-		while not self.interrupt_flag:
-			self.lfd.execute()
-			self.sleep_rate.sleep()
+		# Run the thread in different modes
+		if self.mode == "Execute_dt":
+			while not self.interrupt_flag:
+				self.lfd.execute_dt()
+				self.sleep_rate.sleep()
+		elif self.mode == "Execute":
+			if self.lfd.tree is not None:
+				self.lfd.tree.blackboard_exchange.unregister_services()
+			self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, simple_algo=False)
+			while not self.interrupt_flag:
+				self.lfd.execute()
+				self.sleep_rate.sleep()
+		elif self.mode == "Execute_simple_algo":
+			# Regain the behavior tree in simple mode
+			if self.lfd.tree is not None:
+				self.lfd.tree.blackboard_exchange.unregister_services()
+			self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, simple_algo=True)
+			while not self.interrupt_flag:
+				self.lfd.execute()
+				self.sleep_rate.sleep()
 
 def main():
 	app = QtGui.QApplication(sys.argv)

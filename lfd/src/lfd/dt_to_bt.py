@@ -177,20 +177,59 @@ def min_sop_to_bt_cond(min_sop):
         cond: a representation of the structure of a bt that implements the SoP.
 
     """
-    or_node = BTNode('or', BTNode.FALLBACK)
-    for minterm in min_sop:
-        and_node = BTNode('and', BTNode.SEQUENCE)
-        for cond in minterm:
+
+    # If there is only one minterm in min_sop, omit fallback node.
+    if len(min_sop) == 1:
+        # If there is only one condition node in the minterm, omit sequence node.
+        if len(min_sop[0]) == 1:
+            cond = min_sop[0][0]
             cond_node = BTNode(
                 'cond_{0}{1}'.format('' if cond[1] else '~', cond[0]),
                 BTNode.CONDITION,
                 user_id=cond[0],
                 neg_cond=not cond[1]
             )
-            and_node.add_child(cond_node)
-        or_node.add_child(and_node)
+            return cond_node
+        else:
+            and_node = BTNode('and', BTNode.SEQUENCE)
+            minterm = min_sop[0]
+            for cond in minterm:
+                cond_node = BTNode(
+                    'cond_{0}{1}'.format('' if cond[1] else '~', cond[0]),
+                    BTNode.CONDITION,
+                    user_id=cond[0],
+                    neg_cond=not cond[1]
+                )
+                and_node.add_child(cond_node)
+            return and_node
+
+
+    or_node = BTNode('or', BTNode.FALLBACK)
+    for minterm in min_sop:
+        # If there is only one condition node in minterm, omit sequence node.
+        if len(minterm) == 1:
+            cond = minterm[0]
+            cond_node = BTNode(
+                'cond_{0}{1}'.format('' if cond[1] else '~', cond[0]), 
+                BTNode.CONDITION, 
+                user_id=cond[0], 
+                neg_cond=not cond[1]
+            )
+            or_node.add_child(cond_node)
+        else:
+            and_node = BTNode('and', BTNode.SEQUENCE)
+            for cond in minterm:
+                cond_node = BTNode(
+                    'cond_{0}{1}'.format('' if cond[1] else '~', cond[0]),
+                    BTNode.CONDITION,
+                    user_id=cond[0],
+                    neg_cond=not cond[1]
+                )
+                and_node.add_child(cond_node)
+            or_node.add_child(and_node)
 
     return or_node
+
 
 def min_sops_to_bt(min_sops):
     """Convert a list of minimum sum of products to a behavior tree.
@@ -210,13 +249,19 @@ def min_sops_to_bt(min_sops):
     # Loop through all sops
     for clf, sop in min_sops.iteritems():
         # Define nodes
-        seq = BTNode('seq', BTNode.SEQUENCE)
         cond = min_sop_to_bt_cond(sop)
         act = BTNode('act_{0}'.format(clf), BTNode.ACTION, user_id=clf)
         # Build tree
-        seq.add_child(cond)
-        seq.add_child(act)
-        root.add_child(seq)
+        # If the return cond node is a seq node, omit seq node here
+        if cond.node_type == BTNode.SEQUENCE:
+            cond.name = 'seq'
+            cond.add_child(act)
+            root.add_child(cond)
+        else:
+            seq = BTNode('seq', BTNode.SEQUENCE)
+            seq.add_child(cond)
+            seq.add_child(act)
+            root.add_child(seq)
 
     return root
 
