@@ -101,7 +101,9 @@ class LfD:
             6: Action('look_strait', BuildHeadMoveBehavior),
             7: Action('update_joints', BuildUpdateJointsBehavior),
             8: Action('relative forward', BuildRelativeMoveBehavior, amp=0.5, direction='forward'),
-            9: Action('say hello', BuildTTSBehavior, text='hello')
+            9: Action('say hello', BuildTTSBehavior, text='hello'),
+            10: Action('detect handle', BuildBagDetectBehavior),
+            11: Action('grab handle', BuildBagGrabBehavior)
         }
         self.action_names = {}
         self.action_indices = {}
