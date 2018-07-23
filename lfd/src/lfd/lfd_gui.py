@@ -229,7 +229,7 @@ class LfDGui(QtGui.QMainWindow):
 		QtGui.QMessageBox.information(self, 'Success', 'Success in performing ' + action_name +'!')
 
 	def execute_cb(self):
-
+		
 		if self.lfd.clf != None:
 			execute_flag = True
 		else:
