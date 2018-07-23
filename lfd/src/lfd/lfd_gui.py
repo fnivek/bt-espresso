@@ -230,7 +230,7 @@ class LfDGui(QtGui.QMainWindow):
 
 	def execute_cb(self):
 
-		if self.lfd.demo_actions != None:
+		if self.lfd.clf != None:
 			execute_flag = True
 		else:
 			execute_flag = False
@@ -538,17 +538,20 @@ class execThread(threading.Thread):
 				self.lfd.execute_dt()
 				self.sleep_rate.sleep()
 		elif self.mode == "Execute":
-			if self.lfd.tree is not None:
+			if self.lfd.bt_simple_mode == None:
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, simple_algo=False)
+			elif self.lfd.bt_simple_mode == True:
 				self.lfd.tree.blackboard_exchange.unregister_services()
-			self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, simple_algo=False)
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, simple_algo=False)
 			while not self.interrupt_flag:
 				self.lfd.execute()
 				self.sleep_rate.sleep()
 		elif self.mode == "Execute_simple_algo":
-			# Regain the behavior tree in simple mode
-			if self.lfd.tree is not None:
+			if self.lfd.bt_simple_mode == None:
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, simple_algo=True)
+			elif self.lfd.bt_simple_mode == False:
 				self.lfd.tree.blackboard_exchange.unregister_services()
-			self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, simple_algo=True)
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, simple_algo=True)
 			while not self.interrupt_flag:
 				self.lfd.execute()
 				self.sleep_rate.sleep()

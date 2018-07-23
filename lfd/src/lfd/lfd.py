@@ -67,9 +67,11 @@ class LfD:
         # self.redo_last_actions = None
 
         # Model
-        self.clf = tree.DecisionTreeClassifier()
+        self.clf = None
         self.model_file = 'media/model.sav'
         self.tree = None
+        # Indicate simple bt mode or not
+        self.bt_simple_mode = None
 
         # Robot-Specific Config
         self.joint_names = [
@@ -196,7 +198,8 @@ class LfD:
     def render_model(self):
         if self.tree is not None:
             self.tree.blackboard_exchange.unregister_services()
-        self.tree = self.get_bt(self.clf)
+            self.tree = None
+            self.bt_simple_mode = None
         dot_data = tree.export_graphviz(
             self.clf,
             out_file=None,
@@ -226,6 +229,8 @@ class LfD:
         self.run_action(action_id)
 
     def execute(self):
+        if self.tree == None:
+            self.tree = self.get_bt(self.clf)
         state = self.get_state()
         self.write_state(state)
         print 'World state is:'
@@ -498,6 +503,7 @@ class LfD:
                 false_children=dt.tree_.children_right,
                 clf=clf
             )
+        self.bt_simple_mode = simple_algo
 
         root.add_child(self.construct_bt(bt_struct, dt))
 
