@@ -213,7 +213,6 @@ class LfDGui(QtGui.QMainWindow):
 	def writemodel_cb(self):
 		name = QtGui.QFileDialog.getSaveFileName(self, 'Save File')
 		pickle.dump(self.lfd.clf, open(name[0], 'wb'))
-		# pickle.dump(self.lfd.clf, open(str(name), 'wb'))
 		QtGui.QMessageBox.information(self, 'Success', 'Success in saving the model!')
 
 	def loadmodel_cb(self):
@@ -249,7 +248,8 @@ class LfDGui(QtGui.QMainWindow):
 			self.executingThread.start()
 
 	def interrupt_exec(self):
-		self.lfd.tree.interrupt()
+		if self.lfd.tree != None:
+			self.lfd.tree.interrupt()
 		# Stop the running thread
 		self.executingThread.interrupt_flag = True
 		self.executingThread = None
