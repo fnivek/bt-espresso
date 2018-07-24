@@ -70,3 +70,8 @@ def simple_dt_to_bt_test():
     print 'Start simple_dt_to_bt_test'
     bt = simple_dt_to_bt(true_children, false_children, clf)
     print bt
+
+def dt_to_sop_test():
+    print 'Start dt_to_sop_test'
+    min_sop = dt_to_sop(true_children, false_children, clf)
+    print min_sop

@@ -438,6 +438,8 @@ class LfD:
         bt = None
         if struct.node_type == dt_to_bt.BTNode.FALLBACK:
             bt = py_trees.composites.Selector(struct.name)
+        if struct.node_type == dt_to_bt.BTNode.PARALLEL:
+            bt = py_trees.composites.Parallel(struct.name)
         if struct.node_type == dt_to_bt.BTNode.SEQUENCE:
             bt = py_trees.composites.Sequence(struct.name)
         if struct.node_type == dt_to_bt.BTNode.ACTION:

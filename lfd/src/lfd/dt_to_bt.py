@@ -10,7 +10,7 @@ import itertools
 import re
 from sympy.logic import SOPform
 
-def dt_to_min_sop(true_children, false_children, clf):
+def dt_to_min_sop(true_children, false_children, clf, minimizing=True):
     """Convert a decision tree to a minimum sum of product representation.
 
     inputs:
@@ -72,6 +72,9 @@ def dt_to_min_sop(true_children, false_children, clf):
 
     # Get the paths for each leaf node
     dfs(0, [])
+    # If you don't want to minimize the tree, simply return path_dict.
+    if not minimizing:
+        return path_dict
     num_class = len(path_dict)
 
     # For debugging
@@ -115,6 +118,9 @@ def dt_to_min_sop(true_children, false_children, clf):
     # print path_dict
     return path_dict
 
+def dt_to_sop(true_children, false_children, clf):
+    return dt_to_min_sop(true_children, false_children, clf, minimizing=False)
+
 class BTNode:
     """BTNode.
 
@@ -132,6 +138,7 @@ class BTNode:
     """
     # Enumerate the types of nodes
     FALLBACK = 'fallback'
+    PARALLEL = 'parallel'
     SEQUENCE = 'sequence'
     ACTION = 'action'
     CONDITION = 'condition'
@@ -244,7 +251,7 @@ def min_sops_to_bt(min_sops):
 
     """
     # Define the root
-    root = BTNode('root', BTNode.FALLBACK)
+    root = BTNode('root', BTNode.PARALLEL)
 
     # Loop through all sops
     for clf, sop in min_sops.iteritems():
@@ -314,7 +321,7 @@ def simple_dt_to_bt(true_children, false_children, clf, node_id=0):
         #   cond   true_sub_tree       !cond  false_sub_tree
 
         # Define nodes
-        fall = BTNode('fall', BTNode.FALLBACK)
+        fall = BTNode('fall', BTNode.PARALLEL)
         seq_true = BTNode('seq_true', BTNode.SEQUENCE)
         seq_false = BTNode('seq_false', BTNode.SEQUENCE)
         cond_true = BTNode('cond_{0}'.format(node_id), BTNode.CONDITION, user_id=node_id)
