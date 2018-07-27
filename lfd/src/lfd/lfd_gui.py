@@ -56,6 +56,8 @@ class LfDGui(QtGui.QMainWindow):
 		home_layout.btn_l.clicked.connect(self.learn_cb)
 		home_layout.btn_e_dt.clicked.connect(self.execute_cb)
 		home_layout.btn_e_sim.clicked.connect(self.execute_cb)
+		home_layout.btn_e_sop.clicked.connect(self.execute_cb)
+		home_layout.btn_e_esp.clicked.connect(self.execute_cb)
 		home_layout.btn_e.clicked.connect(self.execute_cb)
 		home_layout.btn_r.clicked.connect(self.display_action)
 		home_layout.btn_lm.clicked.connect(self.loadmodel_cb)
@@ -200,7 +202,7 @@ class LfDGui(QtGui.QMainWindow):
 			self.redo_actions = self.redo_actions[:-1]
 			# self.redo_last_actions = self.redo_last_actions[:-1]
 		else:
-			print "No undone demonstartion to redo."
+			print("No undone demonstartion to redo.")
 		QtGui.QMessageBox.information(self, 'Success', 'Success in redoing the action!')
 
 	def undo_cb(self):
@@ -262,7 +264,7 @@ class LfDGui(QtGui.QMainWindow):
 
 	def demonstrate_cb(self):
 		world_state = self.lfd.get_state()
-		print 'World state is'
+		print('World state is')
 		self.lfd.print_state(world_state)
 		action_name = self.sender().objectName()
 		user_input = numpy.array([[int(self.lfd.action_indices[action_name])]])
@@ -336,18 +338,32 @@ class Home(QtGui.QWidget):
 		self.btn_e_dt.move(0, 100)
 
 		# Button for simple behavior tree method
-		self.btn_e_sim = QtGui.QPushButton("Execute_simple_algo")
+		self.btn_e_sim = QtGui.QPushButton("Execute_naive_algo")
 		self.btn_e_sim.resize(self.btn_e_sim.minimumSizeHint())
-		self.btn_e_sim.setObjectName("Execute_simple_algo")
+		self.btn_e_sim.setObjectName("Execute_naive_algo")
 		self.btn_e_sim.setFont(self.newFont)
 		self.btn_e_sim.move(0, 100)
 
-		# Button for behavior tree method
-		self.btn_e = QtGui.QPushButton("Execute")
+		# Button for SOP behavior tree method
+		self.btn_e_sop = QtGui.QPushButton("Execute_SOP")
+		self.btn_e_sop.resize(self.btn_e_sop.minimumSizeHint())
+		self.btn_e_sop.setObjectName("Execute_SOP")
+		self.btn_e_sop.setFont(self.newFont)
+		self.btn_e_sop.move(0, 100)
+
+		# Button for CDNF behavior tree method
+		self.btn_e = QtGui.QPushButton("Execute_CDNF")
 		self.btn_e.resize(self.btn_e.minimumSizeHint())
-		self.btn_e.setObjectName("Execute")
+		self.btn_e.setObjectName("Execute_CDNF")
 		self.btn_e.setFont(self.newFont)
 		self.btn_e.move(0, 100)
+
+		# Button for Espresso behavior tree method
+		self.btn_e_esp = QtGui.QPushButton("Execute_BTEspresso")
+		self.btn_e_esp.resize(self.btn_e_esp.minimumSizeHint())
+		self.btn_e_esp.setObjectName("Execute_BTEspresso")
+		self.btn_e_esp.setFont(self.newFont)
+		self.btn_e_esp.move(0, 100)
 
 		self.btn_r = QtGui.QPushButton("Rc")
 		self.btn_r.resize(self.btn_r.minimumSizeHint())
@@ -383,7 +399,9 @@ class Home(QtGui.QWidget):
 		self.vlayout.addWidget(self.btn_l)
 		self.vlayout.addWidget(self.btn_e_dt)
 		self.vlayout.addWidget(self.btn_e_sim)
+		self.vlayout.addWidget(self.btn_e_sop)
 		self.vlayout.addWidget(self.btn_e)
+		self.vlayout.addWidget(self.btn_e_esp)
 		self.vlayout.addWidget(self.btn_r)
 		self.vlayout.addWidget(self.btn_lm)
 		self.vlayout.addWidget(self.btn_wm)
@@ -537,26 +555,45 @@ class execThread(threading.Thread):
 			while not self.interrupt_flag:
 				self.lfd.execute_dt()
 				self.sleep_rate.sleep()
-		elif self.mode == "Execute":
-			if self.lfd.bt_simple_mode == None:
-				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, simple_algo=False)
-			elif self.lfd.bt_simple_mode == True:
+		elif self.mode == "Execute_CDNF":
+			if self.lfd.bt_mode == None:
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='CDNF')
+			elif self.lfd.bt_mode != 'CDNF':
 				self.lfd.tree.blackboard_exchange.unregister_services()
-				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, simple_algo=False)
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='CDNF')
 			while not self.interrupt_flag:
 				self.lfd.execute()
 				self.sleep_rate.sleep()
-		elif self.mode == "Execute_simple_algo":
-			if self.lfd.bt_simple_mode == None:
-				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, simple_algo=True)
-			elif self.lfd.bt_simple_mode == False:
+		elif self.mode == "Execute_naive_algo":
+			if self.lfd.bt_mode == None:
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='Naive')
+			elif self.lfd.bt_mode != 'Naive':
 				self.lfd.tree.blackboard_exchange.unregister_services()
-				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, simple_algo=True)
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='Naive')
+			while not self.interrupt_flag:
+				self.lfd.execute()
+				self.sleep_rate.sleep()
+		elif self.mode == "Execute_SOP":
+			if self.lfd.bt_mode == None:
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='SOP')
+			elif self.lfd.bt_mode != 'SOP':
+				self.lfd.tree.blackboard_exchange.unregister_services()
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='SOP')
+			while not self.interrupt_flag:
+				self.lfd.execute()
+				self.sleep_rate.sleep()
+		elif self.mode == "Execute_BTEspresso":
+			if self.lfd.bt_mode == None:
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='Espresso')
+			elif self.lfd.bt_mode != 'Espresso':
+				self.lfd.tree.blackboard_exchange.unregister_services()
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='Espresso')
 			while not self.interrupt_flag:
 				self.lfd.execute()
 				self.sleep_rate.sleep()
 
 def main():
+	py_trees.logging.level = py_trees.logging.Level.DEBUG
 	app = QtGui.QApplication(sys.argv)
 	gui = LfDGui()
 	sys.exit(app.exec_())

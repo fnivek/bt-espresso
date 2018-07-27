@@ -27,6 +27,7 @@ import py_trees_ros
 from action_builders import *
 import dt_to_bt
 
+
 def shutdown(tree):
     """Stop the tree."""
     tree.interrupt()
@@ -70,8 +71,13 @@ class LfD:
         self.clf = None
         self.model_file = 'media/model.sav'
         self.tree = None
-        # Indicate simple bt mode or not
-        self.bt_simple_mode = None
+
+        # Enumerate the type of BT
+        NAIVE = 'naive'
+        SOP = 'SOP'
+        CDNF = 'CDNF'
+        ESPRESSO = 'espresso'
+        self.bt_mode = None
 
         # Robot-Specific Config
         self.joint_names = [
@@ -199,7 +205,7 @@ class LfD:
         if self.tree is not None:
             self.tree.blackboard_exchange.unregister_services()
             self.tree = None
-            self.bt_simple_mode = None
+            self.bt_mode = None
         dot_data = tree.export_graphviz(
             self.clf,
             out_file=None,
@@ -439,7 +445,7 @@ class LfD:
         if struct.node_type == dt_to_bt.BTNode.FALLBACK:
             bt = py_trees.composites.Selector(struct.name)
         if struct.node_type == dt_to_bt.BTNode.PARALLEL:
-            bt = py_trees.composites.Parallel(struct.name)
+            bt = py_trees.composites.Parallel(struct.name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL)
         if struct.node_type == dt_to_bt.BTNode.SEQUENCE:
             bt = py_trees.composites.Sequence(struct.name)
         if struct.node_type == dt_to_bt.BTNode.ACTION:
@@ -474,7 +480,7 @@ class LfD:
 
         return bt
 
-    def get_bt(self, dt, simple_algo=False):
+    def get_bt(self, dt, bt_type='Espresso'):
         """Convert a decision tree to a behavior tree."""
         # Build the root
         #   The root is a sequence node that first writes the current state to the blackboard then
@@ -493,19 +499,34 @@ class LfD:
             dt.classes_[numpy.argmax(dt.tree_.value[node_id][0])]
             for node_id in xrange(len(dt.tree_.children_left))
         ]
-        if simple_algo:
+        if bt_type == 'Naive':
             bt_struct = dt_to_bt.simple_dt_to_bt(
                 true_children=dt.tree_.children_left,
                 false_children=dt.tree_.children_right,
                 clf=clf
             )
-        else:
+        elif bt_type == 'SOP':
             bt_struct = dt_to_bt.dt_to_bt(
                 true_children=dt.tree_.children_left,
                 false_children=dt.tree_.children_right,
-                clf=clf
+                clf=clf,
+                bt_type='SOP'
             )
-        self.bt_simple_mode = simple_algo
+        elif bt_type == 'CDNF':
+            bt_struct = dt_to_bt.dt_to_bt(
+                true_children=dt.tree_.children_left,
+                false_children=dt.tree_.children_right,
+                clf=clf,
+                bt_type='CDNF'
+            )
+        elif bt_type == 'Espresso':
+            bt_struct = dt_to_bt.dt_to_bt(
+                true_children=dt.tree_.children_left,
+                false_children=dt.tree_.children_right,
+                clf=clf,
+                bt_type='Espresso'
+            )
+        self.bt_mode = bt_type
 
         root.add_child(self.construct_bt(bt_struct, dt))
 

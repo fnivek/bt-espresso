@@ -9,6 +9,66 @@ from copy import deepcopy
 import itertools
 import re
 from sympy.logic import SOPform
+import threading
+import os
+import subprocess
+import shlex
+
+
+class MinSOPThread(threading.Thread):
+
+    def __init__(self, name, path_dict, key, decision_symbols):
+        threading.Thread.__init__(self)
+        self.name = name
+        self.path_dict = path_dict
+        self.key = key
+        self.decision_symbols = decision_symbols
+
+    def run(self):
+        minterm = []
+        for line in itertools.product([0, 1], repeat=len(self.decision_symbols)):
+            line = list(line)
+            # For each line, check whether it is the minterm or not
+            minterm_flag = False
+            for single_path in self.path_dict[self.key]:
+                one_product_flag = True
+                for bit in single_path:
+                    bit_symbol = 'a' + str(bit[0])
+                    if line[self.decision_symbols.index(bit_symbol)] == 1 and bit[1] == False:
+                        one_product_flag = False
+                        break
+                    elif line[self.decision_symbols.index(bit_symbol)] == 0 and bit[1] == True:
+                        one_product_flag = False
+                        break
+                if one_product_flag:
+                    minterm_flag = True
+                    break
+            if minterm_flag:
+                minterm.append(line)
+
+        bool_expr = str(SOPform(self.decision_symbols, minterm))
+        parse_symbol_expr_min(bool_expr, self.key, self.path_dict)
+
+
+def parse_symbol_expr_min(bool_expr, class_index, path_dict):
+    # WARNING: May be problematic.
+    simplified_path = []
+    products = re.split('\|', bool_expr)
+    for partial_product in products:
+        one_product = []
+        symbols = re.split('\&', partial_product)
+        for x in symbols:
+            x = x.strip()
+            x = x.strip('()')
+            if x[0] == '~':
+                x = int(x[2:])
+                one_product.append((x, False))
+            else:
+                x = int(x[1:])
+                one_product.append((x, True))
+        simplified_path.append(one_product)
+    path_dict[class_index] = deepcopy(simplified_path)
+
 
 def dt_to_min_sop(true_children, false_children, clf, minimizing=True):
     """Convert a decision tree to a minimum sum of product representation.
@@ -27,12 +87,10 @@ def dt_to_min_sop(true_children, false_children, clf, minimizing=True):
     	So, the root node should be encoded as 1.
     """
     path_dict = {}
-    num_class = 0
-    num_decision = 0
     decision_symbols = []
+    thread_pool = []
     for x in range(len(true_children)):
     	if true_children[x] != -1 and false_children[x] != -1:
-    		num_decision += 1
     		decision_symbols.append('a' + str(x))
 
     def dfs(node_id, prev_path):
@@ -50,76 +108,56 @@ def dt_to_min_sop(true_children, false_children, clf, minimizing=True):
     		else:
     			path_dict[class_index] = [prev_path]
 
-    def parse_symbol_expr(bool_expr, class_index):
-    	# WARNING: May be problematic.
-    	simplified_path = []
-    	products = re.split('\|', bool_expr)
-    	for partial_product in products:
-    		one_product = []
-    		symbols = re.split('\&', partial_product)
-    		for x in symbols:
-    			x = x.strip()
-    			x = x.strip('()')
-    			if x[0] == '~':
-    				x = int(x[2:])
-    				one_product.append((x, False))
-    			else:
-    				x = int(x[1:])
-    				one_product.append((x, True))
-    		simplified_path.append(one_product)
-    	path_dict[class_index] = deepcopy(simplified_path)
-
-
     # Get the paths for each leaf node
     dfs(0, [])
     # If you don't want to minimize the tree, simply return path_dict.
     if not minimizing:
         return path_dict
-    num_class = len(path_dict)
-
-    # For debugging
-    # print path_dict
-    # print "num_class: " + str(num_class)
-    # print "num_decision: " + str(num_decision)
-    # print decision_symbols
 
     # Simplify each class boolean expression using sympy
     for key in path_dict:
     	# Assumption: The path list for each class has been sorted
     	# based on absolute values
     	if len(path_dict[key]) > 1:
-    		minterm = []
-    		for line in itertools.product([0, 1], repeat=num_decision):
-    			line = list(line)
-    			# For each line, check whether it is the minterm or not
-    			minterm_flag = False
-    			for single_path in path_dict[key]:
-    				one_product_flag = True
-    				for bit in single_path:
-    					bit_symbol = 'a' + str(bit[0])
+            sop_thread = MinSOPThread('thread' + str(key), path_dict, key, decision_symbols)
+            thread_pool.append(sop_thread)
+            sop_thread.start()
 
-    					if line[decision_symbols.index(bit_symbol)] == 1 and bit[1] == False:
-    						one_product_flag = False
-    						break
-    					elif line[decision_symbols.index(bit_symbol)] == 0 and bit[1] == True:
-    						one_product_flag = False
-    						break
-    				if one_product_flag:
-    					minterm_flag = True
-    					break
-    			if minterm_flag:
-    				minterm.append(line)
+    # Wait for all the threads' finishing
+    for thr in thread_pool:
+        thr.join()
 
-    		# print minterm
-    		bool_expr = str(SOPform(decision_symbols, minterm))
-    		# print bool_expr
-    		parse_symbol_expr(bool_expr, key)
-
-    # print path_dict
     return path_dict
 
 def dt_to_sop(true_children, false_children, clf):
     return dt_to_min_sop(true_children, false_children, clf, minimizing=False)
+
+
+def dt_to_min_sop_espresso(true_children, false_children, clf):
+    """Convert a decision tree to a minimum sum of product representation
+        using heuristic algorithm called Espresso.
+
+    Create a subprocess to run Espresso algorithm
+    """
+    # Hardcode the path. It may be problematic.
+    os.chdir(os.path.expanduser('~/catkin_ws/src/mobile_manipulation/lfd/lfd/src/lfd'))
+    cmd_line = './dt_to_bt_espresso.py '
+    for x in true_children:
+        cmd_line += str(x)
+        cmd_line += ' '
+    for x in false_children:
+        cmd_line += str(x)
+        cmd_line += ' '
+    for x in clf:
+        cmd_line += str(x)
+        cmd_line += ' '
+    args = shlex.split(cmd_line)
+    espresso_proc = subprocess.Popen(args, stdout=subprocess.PIPE)
+    result_str = espresso_proc.stdout.readlines()[0]
+    path_dict = eval(result_str[0:(len(result_str) - 1)])
+
+    return path_dict
+
 
 class BTNode:
     """BTNode.
@@ -272,8 +310,12 @@ def min_sops_to_bt(min_sops):
 
     return root
 
-def dt_to_bt(true_children, false_children, clf):
+def dt_to_bt(true_children, false_children, clf, bt_type):
     """Convert a decision tree to a minimum sum of product representation.
+        Enumerations of by_type:
+        1. 'SOP': BT with sum of products form without simplification
+        2. 'CDNF': BT with minimum sum of products form
+        3. 'Espresso': BT with approximate minimum sum of products form
 
     Inputs:
         true_children: TODO(Allen).
@@ -283,10 +325,14 @@ def dt_to_bt(true_children, false_children, clf):
         TODO(Allen).
 
     """
-    min_sops = dt_to_min_sop(true_children, false_children, clf)
+    if bt_type == 'SOP':
+        min_sops = dt_to_sop(true_children, false_children, clf)
+    elif bt_type == 'CDNF':
+        min_sops = dt_to_min_sop(true_children, false_children, clf)
+    elif bt_type == 'Espresso':
+        min_sops = dt_to_min_sop_espresso(true_children, false_children, clf)
     bt = min_sops_to_bt(min_sops)
     return bt
-
 
 def simple_dt_to_bt(true_children, false_children, clf, node_id=0):
     """Convert a decision tree to a behavior tree.
@@ -321,7 +367,7 @@ def simple_dt_to_bt(true_children, false_children, clf, node_id=0):
         #   cond   true_sub_tree       !cond  false_sub_tree
 
         # Define nodes
-        fall = BTNode('fall', BTNode.PARALLEL)
+        fall = BTNode('fall', BTNode.FALLBACK)
         seq_true = BTNode('seq_true', BTNode.SEQUENCE)
         seq_false = BTNode('seq_false', BTNode.SEQUENCE)
         cond_true = BTNode('cond_{0}'.format(node_id), BTNode.CONDITION, user_id=node_id)
