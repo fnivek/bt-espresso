@@ -231,7 +231,7 @@ class LfDGui(QtGui.QMainWindow):
 		QtGui.QMessageBox.information(self, 'Success', 'Success in performing ' + action_name +'!')
 
 	def execute_cb(self):
-		
+
 		if self.lfd.clf != None:
 			execute_flag = True
 		else:
@@ -602,7 +602,7 @@ class execThread(threading.Thread):
 				self.sleep_rate.sleep()
 
 def main():
-	py_trees.logging.level = py_trees.logging.Level.DEBUG
+	# py_trees.logging.level = py_trees.logging.Level.DEBUG
 	app = QtGui.QApplication(sys.argv)
 	gui = LfDGui()
 	sys.exit(app.exec_())
