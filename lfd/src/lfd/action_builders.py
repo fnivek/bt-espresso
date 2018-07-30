@@ -5,7 +5,7 @@ from std_msgs.msg import String
 from sensor_msgs.msg import JointState
 
 from centroid_detector_msgs.msg import DetectCentroidGoal, DetectCentroidAction
-from behavior_manager.interfaces.manipulation_behavior import FullyExtendTorso, ColapseTorso, MoveTorsoBehavior, PickBehavior, TuckWithCondBehavior, PlaceBehavior
+from behavior_manager.interfaces.manipulation_behavior_new import FullyExtendTorso, MoveTorsoBehavior, PickBehavior, TuckWithCondBehavior, PlaceBehavior
 from behavior_manager.interfaces.centroid_detector_behavior import CentroidDetectorBehavior
 from behavior_manager.interfaces.head_actuate_behavior import HeadMoveBehavior
 from behavior_manager.interfaces.tts_behavior import TTSBehavior
@@ -55,7 +55,7 @@ def BuildCentroidDetectorBehavior(name):
     blackboard.set(name + '/max_z', 0.9)
     return CentroidDetectorBehavior(name)
 def BuildTuckWithCondBehavior(name):
-    return TuckWithCondBehavior(name, 1)
+    return TuckWithCondBehavior(name, 'tuck')
 def BuildPlaceBehavior(name):
     return PlaceBehavior(name)
 def BuildHeadMoveBehavior(name):
