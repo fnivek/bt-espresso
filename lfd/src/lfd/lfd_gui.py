@@ -9,6 +9,7 @@ import rospy
 import rosparam
 import yaml
 import os
+from time import time
 
 class LfDGui(QtGui.QMainWindow):
 
@@ -556,38 +557,46 @@ class execThread(threading.Thread):
 				self.lfd.execute_dt()
 				self.sleep_rate.sleep()
 		elif self.mode == "Execute_CDNF":
-			if self.lfd.bt_mode == None:
-				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='CDNF')
-			elif self.lfd.bt_mode != 'CDNF':
+			if self.lfd.bt_mode != None and self.lfd.bt_mode != 'CDNF':
 				self.lfd.tree.blackboard_exchange.unregister_services()
+			if self.lfd.bt_mode != 'CDNF':
+				start = time()
 				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='CDNF')
+				stop = time()
+				QtGui.QMessageBox.information(self, 'Success', 'Build BT CDNF in ' + str(stop - start) + ' seconds.')
 			while not self.interrupt_flag:
 				self.lfd.execute()
 				self.sleep_rate.sleep()
 		elif self.mode == "Execute_naive_algo":
-			if self.lfd.bt_mode == None:
-				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='Naive')
-			elif self.lfd.bt_mode != 'Naive':
+			if self.lfd.bt_mode != None and self.lfd.bt_mode != 'Naive':
 				self.lfd.tree.blackboard_exchange.unregister_services()
+			if self.lfd.bt_mode != 'Naive':
+				start = time()
 				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='Naive')
+				stop = time()
+				QtGui.QMessageBox.information(self, 'Success', 'Build BT Naive in ' + str(stop - start) + ' seconds.')
 			while not self.interrupt_flag:
 				self.lfd.execute()
 				self.sleep_rate.sleep()
 		elif self.mode == "Execute_SOP":
-			if self.lfd.bt_mode == None:
-				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='SOP')
-			elif self.lfd.bt_mode != 'SOP':
+			if self.lfd.bt_mode != None and self.lfd.bt_mode != 'SOP':
 				self.lfd.tree.blackboard_exchange.unregister_services()
+			if self.lfd.bt_mode != 'SOP':
+				start = time()
 				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='SOP')
+				stop = time()
+				QtGui.QMessageBox.information(self, 'Success', 'Build BT SOP in ' + str(stop - start) + ' seconds.')
 			while not self.interrupt_flag:
 				self.lfd.execute()
 				self.sleep_rate.sleep()
 		elif self.mode == "Execute_BTEspresso":
-			if self.lfd.bt_mode == None:
-				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='Espresso')
-			elif self.lfd.bt_mode != 'Espresso':
+			if self.lfd.bt_mode != None and self.lfd.bt_mode != 'Espresso':
 				self.lfd.tree.blackboard_exchange.unregister_services()
+			if self.lfd.bt_mode != 'Espresso':
+				start = time()
 				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='Espresso')
+				stop = time()
+				QtGui.QMessageBox.information(self, 'Success', 'Build BTEspresso in ' + str(stop - start) + ' seconds.')
 			while not self.interrupt_flag:
 				self.lfd.execute()
 				self.sleep_rate.sleep()
