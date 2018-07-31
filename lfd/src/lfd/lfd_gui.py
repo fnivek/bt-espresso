@@ -563,7 +563,7 @@ class execThread(threading.Thread):
 				start = time()
 				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='CDNF')
 				stop = time()
-				QtGui.QMessageBox.information(self, 'Success', 'Build BT CDNF in ' + str(stop - start) + ' seconds.')
+				print 'CDNF time: ' + str(stop - start)
 			while not self.interrupt_flag:
 				self.lfd.execute()
 				self.sleep_rate.sleep()
@@ -574,7 +574,7 @@ class execThread(threading.Thread):
 				start = time()
 				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='Naive')
 				stop = time()
-				QtGui.QMessageBox.information(self, 'Success', 'Build BT Naive in ' + str(stop - start) + ' seconds.')
+				print 'Naive time: ' + str(stop - start)
 			while not self.interrupt_flag:
 				self.lfd.execute()
 				self.sleep_rate.sleep()
@@ -585,7 +585,7 @@ class execThread(threading.Thread):
 				start = time()
 				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='SOP')
 				stop = time()
-				QtGui.QMessageBox.information(self, 'Success', 'Build BT SOP in ' + str(stop - start) + ' seconds.')
+				print 'SOP time: ' + str(stop - start)
 			while not self.interrupt_flag:
 				self.lfd.execute()
 				self.sleep_rate.sleep()
@@ -596,7 +596,7 @@ class execThread(threading.Thread):
 				start = time()
 				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='Espresso')
 				stop = time()
-				QtGui.QMessageBox.information(self, 'Success', 'Build BTEspresso in ' + str(stop - start) + ' seconds.')
+				print 'Espresso time: ' + str(stop - start)
 			while not self.interrupt_flag:
 				self.lfd.execute()
 				self.sleep_rate.sleep()
