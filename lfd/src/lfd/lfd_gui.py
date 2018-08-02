@@ -83,6 +83,7 @@ class LfDGui(QtGui.QMainWindow):
 
 		# Action interface layout
 		action_interface_layout = ActionInterface()
+		action_interface_layout.state_label.setText(self.lfd.state_to_str(self.lfd.get_state()))
 
 		# Choose callback function
 		if self.sender().objectName() == "Demonstrate":
@@ -100,21 +101,21 @@ class LfDGui(QtGui.QMainWindow):
 			button.setObjectName(name)
 			button.clicked.connect(self.button_cb)
 			button.setFont(action_interface_layout.newFont)
-			action_interface_layout.vlayout.addWidget(button)
+			action_interface_layout.but_layout.addWidget(button)
 
-		action_interface_layout.vlayout.addStretch()
+		action_interface_layout.but_layout.addStretch()
 
 		# Label
 		action_interface_layout.back_label = QtGui.QLabel()
 		action_interface_layout.back_label.setText("Options:")
 		action_interface_layout.back_label.setFont(action_interface_layout.menu_font)
 
-		action_interface_layout.vlayout.addWidget(action_interface_layout.back_label)
+		action_interface_layout.but_layout.addWidget(action_interface_layout.back_label)
 
 		# Go Back Button
 		action_interface_layout.back_btn = QtGui.QPushButton("Go Back")
 		action_interface_layout.back_btn.setFont(action_interface_layout.newFont)
-		action_interface_layout.vlayout.addWidget(action_interface_layout.back_btn)
+		action_interface_layout.but_layout.addWidget(action_interface_layout.back_btn)
 
 		# Set up go back button connections
 		action_interface_layout.back_btn.clicked.connect(self.display_home)
@@ -122,7 +123,7 @@ class LfDGui(QtGui.QMainWindow):
 		# Button for add TTS behaviors
 		action_interface_layout.tts_btn = QtGui.QPushButton("Add TTS Behavior")
 		action_interface_layout.tts_btn.setFont(action_interface_layout.newFont)
-		action_interface_layout.vlayout.addWidget(action_interface_layout.tts_btn)
+		action_interface_layout.but_layout.addWidget(action_interface_layout.tts_btn)
 
 		# Set up add tts button connections
 		action_interface_layout.tts_btn.clicked.connect(self.display_tts)
@@ -453,7 +454,18 @@ class ActionInterface(QtGui.QWidget):
 		self.menu_label.setFont(self.menu_font)
 
 		self.vlayout.addWidget(self.menu_label)
-		self.vlayout.addStretch()
+		# self.vlayout.addStretch()
+
+		self.hlayout = QtGui.QHBoxLayout()
+		# self.state_scroll = QtGui.QScrollArea()
+		self.state_label = QtGui.QLabel()
+		# self.state_scroll.setWidget(self.state_label)
+		self.but_layout = QtGui.QVBoxLayout()
+		# self.hlayout.addWidget(self.state_scroll)
+		self.hlayout.addWidget(self.state_label)
+		self.hlayout.addLayout(self.but_layout)
+
+		self.vlayout.addLayout(self.hlayout)
 
 		self.setLayout(self.vlayout)
 

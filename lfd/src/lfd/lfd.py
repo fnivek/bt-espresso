@@ -118,7 +118,7 @@ class LfD:
         for key, value in self.actions.iteritems():
             self.action_names[key] = str(value)
             self.action_indices[str(value)] = key
-        num_last_actions = 3
+        num_last_actions = 1
         self.last_actions = collections.deque(maxlen=num_last_actions)
         for _ in xrange(num_last_actions):
             self.last_actions.append(0)
@@ -153,7 +153,7 @@ class LfD:
         print 'Features:\n\t', self.feature_names
 
         # Build a perception tree
-        # self.build_perception_tree()
+        self.build_perception_tree()
 
     def run_action(self, action_id):
         # If the action_id is a name then get the key
@@ -168,19 +168,13 @@ class LfD:
     def build_perception_tree(self):
         # Define behaviors
         root = py_trees.composites.Parallel('perception_root')
-        # get_joint_states = py_trees_ros.subscribers.ToBlackboard('get_joint_states',
-        #     '/joint_states',
-        #     JointState,
-        #     {'joint_states': None},
-        #     clearing_policy=py_trees.common.ClearingPolicy.NEVER
-        # )
-        # detect_centroid = CentroidDetectorBehavior('detect_centroid')
-        get_joint_states = py_trees_ros.trees.BehaviourTree(JointToBlackboardBehavior(name="something", topic_name="/joint_states", topic_type=JointState))
+        detect_centroid = CentroidDetectorBehavior('detect_centroid')
+        get_joint_states = JointToBlackboardBehavior(name="get_joint_states", topic_name="/joint_states", topic_type=JointState)
 
         # Define structure of tree
         root.add_children([
             get_joint_states,
-            # detect_centroid
+            detect_centroid
         ])
 
         # Wrap tree in ros tree
@@ -267,8 +261,15 @@ class LfD:
             self.blackboard.set(name, value)
 
     def print_state(self, state):
+        print self.state_to_str(state)
+
+    def state_to_str(self, state):
+        state_str = ''
         for name, value in zip(self.feature_names, state[0]):
-            print '{0}: {1}'.format(name, value)
+            state_str += '{0}: {1}\n'.format(name, value)
+        state_str = state_str[:-1]
+        return state_str
+
 
     def run(self):
         # State
