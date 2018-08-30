@@ -190,6 +190,12 @@ class LfD:
     def shutdown_perception_tree(self, tree):
         """Stop the tree."""
         tree.interrupt()
+        tree.blackboard_exchange.unregister_services()
+
+    def stop_perception_tree(self):
+        """Stop the tree."""
+        self.perception_tree.interrupt()
+        self.perception_tree.blackboard_exchange.unregister_services()
 
     # A model that takes in a state and produces an action
     def model(self, state):
@@ -488,6 +494,7 @@ class LfD:
         #       Runs the behavior tree
         root = py_trees.composites.Parallel(name='root')
         root.add_child(JointToBlackboardBehavior(name='joint_to_bb', topic_name='/joint_states', topic_type=JointState))
+        root.add_child(CentroidDetectorBehavior(name='detect_centroid'))
 
         # Build the tree from dt.tree_
         #   The decision tree is stored in a few arrays of size node_count

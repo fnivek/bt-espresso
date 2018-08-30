@@ -66,22 +66,22 @@ def BuildUpdateJointsBehavior(name):
     return JointToBlackboardBehavior(name=name, topic_name="/joint_states", topic_type=JointState)
 def BuildRelativeMoveBehavior(name, amp=0.5, direction='forward'):
     if direction == 'forward':
-        return MoveForwardBehavior(name, amp)
+        return NavOverride('override', MoveForwardBehavior(name, amp))
     elif direction == 'backward':
-        return MoveBackwardBehavior(name, amp)
+        return NavOverride('override', MoveBackwardBehavior(name, amp))
     elif direction == 'right':
-        return MoveRightBehavior(name, amp)
+        return NavOverride('override', MoveRightBehavior(name, amp))
     elif direction == 'left':
-        return MoveLeftBehavior(name, amp)
+        return NavOverride('override', MoveLeftBehavior(name, amp))
     elif direction == 'turn':
-        return TurnInPlaceBehavior(name, amp)
+        return NavOverride('override', TurnInPlaceBehavior(name, amp))
     else:
         return None
 # Hardcoded behavior for grocery bag packing task
 def BuildNavToBagBehavior(name):
-    return NavToPoseWithCondBehavior(name=name, param_server_name='/grocery_bag_packing/pose_grocery_bag')
+    return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/grocery_bag_packing/pose_grocery_bag'))
 def BuildNavToItemsBehavior(name):
-    return NavToPoseWithCondBehavior(name=name, param_server_name='/grocery_bag_packing/pose_items')
+    return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/grocery_bag_packing/pose_items'))
 def BuildBagDetectBehavior(name):
     return DetectHandlesBehavior(name)
 def BuildBagGrabBehavior(name):

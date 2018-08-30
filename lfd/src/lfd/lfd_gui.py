@@ -75,6 +75,9 @@ class LfDGui(QtGui.QMainWindow):
 		self.setCentralWidget(home_layout)
 		self.show()
 
+		# Turn off perception tree
+		self.lfd.stop_perception_tree()
+
 	def display_action(self):
 		'''
 		TODO: All button setting should be done
@@ -131,6 +134,10 @@ class LfDGui(QtGui.QMainWindow):
 		# Show the layout
 		self.setCentralWidget(action_interface_layout)
 		self.show()
+
+		# Restart perception tree
+		self.lfd.stop_perception_tree()
+		self.lfd.build_perception_tree()
 
 	def display_exec(self):
 		# Execute interface layout
@@ -617,6 +624,8 @@ def main():
 	# py_trees.logging.level = py_trees.logging.Level.DEBUG
 	app = QtGui.QApplication(sys.argv)
 	gui = LfDGui()
+	nav_override_gui = NavOverrideGui()
+	nav_override_gui.show()
 	sys.exit(app.exec_())
 
 if __name__ == '__main__':
