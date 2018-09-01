@@ -5,7 +5,7 @@ from std_msgs.msg import String
 from sensor_msgs.msg import JointState
 
 from centroid_detector_msgs.msg import DetectCentroidGoal, DetectCentroidAction
-from behavior_manager.interfaces.manipulation_behavior_new import FullyExtendTorso, MoveTorsoBehavior, PickBehavior, TuckWithCondBehavior, PlaceBehavior
+from behavior_manager.interfaces.manipulation_behavior_new import FullyExtendTorso, MoveTorsoBehavior, PickBehavior, TuckWithCondBehavior, PlaceBehavior, GrasplocPickBehavior
 from behavior_manager.interfaces.centroid_detector_behavior import CentroidDetectorBehavior
 from behavior_manager.interfaces.head_actuate_behavior import HeadMoveBehavior
 from behavior_manager.interfaces.tts_behavior import TTSBehavior
@@ -13,6 +13,7 @@ from behavior_manager.interfaces.update_joints_behavior import JointToBlackboard
 from behavior_manager.interfaces.navigation_behavior import *
 from behavior_manager.interfaces.detect_handles_behavior import DetectHandlesBehavior
 from behavior_manager.interfaces.grab_bag_behavior import GrabBagBehavior
+from behavior_manager.interfaces.grasploc_behavior import GrasplocBehavior
 
 class Action:
     def __init__(self, name, builder, *builder_args, **builder_kwargs):
@@ -86,3 +87,7 @@ def BuildBagDetectBehavior(name):
     return DetectHandlesBehavior(name)
 def BuildBagGrabBehavior(name):
     return GrabBagBehavior(name)
+def BuildGrasplocBehavior(name):
+    return GrasplocBehavior(name, 'centroid')
+def BuildGrasplocPickBehavior(name):
+    return GrasplocPickBehavior(name)

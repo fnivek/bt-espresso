@@ -1,5 +1,6 @@
 <launch>
   <include file="$(find fetch_manipulation_pipeline)/launch/fetch_manipulation_pipeline.launch"/>
+  <include file="$(find grasploc_wrapper)/launch/grasploc_wrapper.launch"/>
   <include file="$(find centroid_detector)/launch/centroid_detector.launch"/>
   <include file="$(find head_move)/launch/head_move.launch"/>
   <include file="$(find bag_handle_detector)/launch/bag_handle_detector.launch"/>

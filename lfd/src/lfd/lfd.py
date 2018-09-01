@@ -111,7 +111,9 @@ class LfD:
             8: Action('relative forward', BuildRelativeMoveBehavior, amp=0.5, direction='forward'),
             9: Action('say hello', BuildTTSBehavior, text='hello'),
             10: Action('detect handle', BuildBagDetectBehavior),
-            11: Action('grab handle', BuildBagGrabBehavior)
+            11: Action('grab handle', BuildBagGrabBehavior),
+            12: Action('grasploc', BuildGrasplocBehavior),
+            13: Action('grasploc_pick', BuildGrasplocPickBehavior),
         }
         self.action_names = {}
         self.action_indices = {}
