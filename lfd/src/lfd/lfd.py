@@ -47,9 +47,9 @@ class LastActionVisitor(py_trees.visitors.VisitorBase):
 
     def run(self, behav):
         # If an action was run and finished then push it to the last actions
-        if behav.name in self.lfd.action_indices.keys():
-            if behav.status != py_trees.common.Status.RUNNING:
-                self.lfd.last_actions.append(self.lfd.action_indices[behav.name])
+        if behav.status != py_trees.common.Status.RUNNING:
+            if behav in self.lfd.last_action_dict:
+                self.lfd.last_actions.append(self.lfd.last_action_dict[behav])
                 # Update world state
                 world_state = self.lfd.get_state()
                 self.lfd.write_state(world_state)
@@ -110,17 +110,21 @@ class LfD:
             7: Action('update_joints', BuildUpdateJointsBehavior),
             8: Action('relative forward', BuildRelativeMoveBehavior, amp=0.5, direction='forward'),
             9: Action('say hello', BuildTTSBehavior, text='hello'),
-            10: Action('detect handle', BuildBagDetectBehavior),
-            11: Action('grab handle', BuildBagGrabBehavior),
-            12: Action('grasploc', BuildGrasplocBehavior),
-            13: Action('grasploc_pick', BuildGrasplocPickBehavior),
+            # 10: Action('detect handle', BuildBagDetectBehavior),
+            # 11: Action('grab handle', BuildBagGrabBehavior),
+            # 12: Action('grasploc', BuildGrasplocBehavior),
+            # 13: Action('grasploc_pick', BuildGrasplocPickBehavior),
+            14: Action('detect_person', BuildPersonDetectorBehavior),
+            15: Action('look_at_person', BuildLookAtPersonBehavior),
+            16: Action('sleep', BuildSleepBehavior),
+            # 17: Action('object_detector', BuildObjectDetectorBehavior)
         }
         self.action_names = {}
         self.action_indices = {}
         for key, value in self.actions.iteritems():
             self.action_names[key] = str(value)
             self.action_indices[str(value)] = key
-        num_last_actions = 1
+        num_last_actions = 3
         self.last_actions = collections.deque(maxlen=num_last_actions)
         for _ in xrange(num_last_actions):
             self.last_actions.append(0)
@@ -155,7 +159,7 @@ class LfD:
         print 'Features:\n\t', self.feature_names
 
         # Build a perception tree
-        self.build_perception_tree()
+        self.start_perception_tree()
 
     def run_action(self, action_id):
         # If the action_id is a name then get the key
@@ -170,24 +174,20 @@ class LfD:
     def build_perception_tree(self):
         # Define behaviors
         root = py_trees.composites.Parallel('perception_root')
-        detect_centroid = CentroidDetectorBehavior('detect_centroid')
-        get_joint_states = JointToBlackboardBehavior(name="get_joint_states", topic_name="/joint_states", topic_type=JointState)
+        get_joint_states = BuildUpdateJointsBehavior(name='perception_tree_get_joint_states')
+        detect_centroid = BuildCentroidDetectorBehavior(name='perception_tree_detect_centroid')
+        detect_person = BuildPersonDetectorBehavior(name='perception_tree_detect_person')
+        grasploc = BuildGrasplocBehavior(name='perception_tree_grasploc')
 
         # Define structure of tree
         root.add_children([
             get_joint_states,
-            detect_centroid
+            # detect_centroid,
+            # detect_person,
+            # grasploc,
         ])
 
-        # Wrap tree in ros tree
-        self.perception_tree = py_trees_ros.trees.BehaviourTree(root)
-
-        # Add a interupt hook and setup
-        rospy.on_shutdown(functools.partial(self.shutdown_perception_tree, self.perception_tree))
-        self.perception_tree.setup(30)
-
-        # Start a thread for the tree
-        thread.start_new_thread(self.perception_tree.tick_tock, (10,))
+        return root
 
     def shutdown_perception_tree(self, tree):
         """Stop the tree."""
@@ -198,6 +198,20 @@ class LfD:
         """Stop the tree."""
         self.perception_tree.interrupt()
         self.perception_tree.blackboard_exchange.unregister_services()
+
+    def start_perception_tree(self):
+        """Start a perception tree."""
+        root = self.build_perception_tree()
+
+        # Wrap tree in ros tree
+        self.perception_tree = py_trees_ros.trees.BehaviourTree(root)
+
+        # Add a interupt hook and setup
+        rospy.on_shutdown(functools.partial(self.shutdown_perception_tree, self.perception_tree))
+        self.perception_tree.setup(30)
+
+        # Start a thread for the tree
+        thread.start_new_thread(self.perception_tree.tick_tock, (10,))
 
     # A model that takes in a state and produces an action
     def model(self, state):
@@ -241,8 +255,8 @@ class LfD:
             self.tree = self.get_bt(self.clf)
         state = self.get_state()
         self.write_state(state)
-        print 'World state is:'
-        self.print_state(state)
+        # print 'World state is:'
+        # self.print_state(state)
         self.tree.tick()
 
     def get_state(self):
@@ -461,6 +475,7 @@ class LfD:
             name = self.action_names[struct.user_id]
             action = self.actions[struct.user_id]
             bt = action.get_builder()(name, *action.builder_args, **action.builder_kwargs)
+            self.last_action_dict[bt] = struct.user_id
         if struct.node_type == dt_to_bt.BTNode.CONDITION:
             # Get info from dt
             feature_name = self.feature_names[dt.tree_.feature[struct.user_id]]
@@ -494,9 +509,7 @@ class LfD:
         # Build the root
         #   The root is a sequence node that first writes the current state to the blackboard then
         #       Runs the behavior tree
-        root = py_trees.composites.Parallel(name='root')
-        root.add_child(JointToBlackboardBehavior(name='joint_to_bb', topic_name='/joint_states', topic_type=JointState))
-        root.add_child(CentroidDetectorBehavior(name='detect_centroid'))
+        root = self.build_perception_tree()
 
         # Build the tree from dt.tree_
         #   The decision tree is stored in a few arrays of size node_count
@@ -538,11 +551,14 @@ class LfD:
             )
         self.bt_mode = bt_type
 
+        # Make a dict to point to the root of each behavior we want to show up in last actions
+        self.last_action_dict = {}
+
         root.add_child(self.construct_bt(bt_struct, dt))
 
         tree = py_trees_ros.trees.BehaviourTree(root)
         tree.visitors.append(LastActionVisitor(self))
-        tree.setup(30)
+        tree.setup(60)
         rospy.on_shutdown(functools.partial(shutdown, tree))
 
         return tree

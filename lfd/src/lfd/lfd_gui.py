@@ -137,7 +137,7 @@ class LfDGui(QtGui.QMainWindow):
 
 		# Restart perception tree
 		self.lfd.stop_perception_tree()
-		self.lfd.build_perception_tree()
+		self.lfd.start_perception_tree()
 
 	def display_exec(self):
 		# Execute interface layout
@@ -186,6 +186,26 @@ class LfDGui(QtGui.QMainWindow):
 		self.lfd.actions[new_key] = Action('nav_to_items', BuildNavToItemsBehavior)
 		self.lfd.action_names[new_key] = 'nav_to_items'
 		self.lfd.action_indices['nav_to_items'] = new_key
+
+		new_key += 1
+		self.lfd.actions[new_key] = Action('nav_to_home', BuildNavToHomeBehavior)
+		self.lfd.action_names[new_key] = 'nav_to_home'
+		self.lfd.action_indices['nav_to_home'] = new_key
+
+		new_key += 1
+		self.lfd.actions[new_key] = Action('nav_to_item1', BuildNavToItem1Behavior)
+		self.lfd.action_names[new_key] = 'nav_to_item1'
+		self.lfd.action_indices['nav_to_item1'] = new_key
+
+		new_key += 1
+		self.lfd.actions[new_key] = Action('nav_to_item2', BuildNavToItem2Behavior)
+		self.lfd.action_names[new_key] = 'nav_to_item2'
+		self.lfd.action_indices['nav_to_item2'] = new_key
+
+		new_key += 1
+		self.lfd.actions[new_key] = Action('nav_to_item3', BuildNavToItem3Behavior)
+		self.lfd.action_names[new_key] = 'nav_to_item3'
+		self.lfd.action_indices['nav_to_item3'] = new_key
 
 	def load_config_file(self):
 		# Load the configure file through cmd line

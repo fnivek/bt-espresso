@@ -14,6 +14,7 @@ from behavior_manager.interfaces.navigation_behavior import *
 from behavior_manager.interfaces.detect_handles_behavior import DetectHandlesBehavior
 from behavior_manager.interfaces.grab_bag_behavior import GrabBagBehavior
 from behavior_manager.interfaces.grasploc_behavior import GrasplocBehavior
+from behavior_manager.interfaces.sleep_behavior import SleepBehavior
 
 class Action:
     def __init__(self, name, builder, *builder_args, **builder_kwargs):
@@ -48,12 +49,21 @@ def BuildPickBehavior(name):
     return PickBehavior(name)
 def BuildCentroidDetectorBehavior(name):
     blackboard = py_trees.blackboard.Blackboard()
-    blackboard.set(name + '/min_x', 0)
-    blackboard.set(name + '/max_x', 1.2)
-    blackboard.set(name + '/min_y', 0)
-    blackboard.set(name + '/max_y', 0.6)
-    blackboard.set(name + '/min_z', 0.8)
-    blackboard.set(name + '/max_z', 0.9)
+    blackboard.set(name + '/min_x', 0.0)
+    blackboard.set(name + '/max_x', 1.0)
+    blackboard.set(name + '/min_y', -0.5)
+    blackboard.set(name + '/max_y', 0.5)
+    blackboard.set(name + '/min_z', 0.64)
+    blackboard.set(name + '/max_z', 1.12)
+    return CentroidDetectorBehavior(name)
+def BuildPersonDetectorBehavior(name):
+    blackboard = py_trees.blackboard.Blackboard()
+    blackboard.set(name + '/min_x', 0.25)
+    blackboard.set(name + '/max_x', 2.0)
+    blackboard.set(name + '/min_y', -0.5)
+    blackboard.set(name + '/max_y', 0.5)
+    blackboard.set(name + '/min_z', 1.5)
+    blackboard.set(name + '/max_z', 2.0)
     return CentroidDetectorBehavior(name)
 def BuildTuckWithCondBehavior(name):
     return TuckWithCondBehavior(name, 'tuck')
@@ -61,6 +71,8 @@ def BuildPlaceBehavior(name):
     return PlaceBehavior(name)
 def BuildHeadMoveBehavior(name):
     return HeadMoveBehavior(name, None, 1, 0, 0.5)
+def BuildLookAtPersonBehavior(name):
+    return HeadMoveBehavior(name, None, 1, 0, 1.75)
 def BuildTTSBehavior(name, text='hello'):
     return TTSBehavior(name, text)
 def BuildUpdateJointsBehavior(name):
@@ -83,6 +95,14 @@ def BuildNavToBagBehavior(name):
     return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/grocery_bag_packing/pose_grocery_bag'))
 def BuildNavToItemsBehavior(name):
     return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/grocery_bag_packing/pose_items'))
+def BuildNavToHomeBehavior(name):
+    return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/swag_delivery/pose_home'))
+def BuildNavToItem1Behavior(name):
+    return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/swag_delivery/pose_item1'))
+def BuildNavToItem2Behavior(name):
+    return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/swag_delivery/pose_item2'))
+def BuildNavToItem3Behavior(name):
+    return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/swag_delivery/pose_item3'))
 def BuildBagDetectBehavior(name):
     return DetectHandlesBehavior(name)
 def BuildBagGrabBehavior(name):
@@ -91,3 +111,5 @@ def BuildGrasplocBehavior(name):
     return GrasplocBehavior(name, 'centroid')
 def BuildGrasplocPickBehavior(name):
     return GrasplocPickBehavior(name)
+def BuildSleepBehavior(name, duration=1):
+    return SleepBehavior(name, duration)
