@@ -279,9 +279,10 @@ class LfD:
         self.clf = Pipeline([
           ('feature_selection', SelectPercentile(f_classif, percentile=30)),
           ('classification', tree.DecisionTreeClassifier(
-            max_depth=5,
+            max_depth=15,
             class_weight='balanced',
-            min_samples_leaf=5,)),
+            min_samples_leaf=2,
+            )),
         ])
         self.clf.fit(states, actions)
 
