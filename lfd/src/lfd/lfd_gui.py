@@ -63,6 +63,9 @@ class LfDGui(QtGui.QMainWindow):
 		home_layout.btn_r.clicked.connect(self.display_action)
 		home_layout.btn_lm.clicked.connect(self.loadmodel_cb)
 		home_layout.btn_wm.clicked.connect(self.writemodel_cb)
+		home_layout.btn_ld.clicked.connect(self.load_demos_cb)
+		home_layout.btn_wd.clicked.connect(self.write_demos_cb)
+		home_layout.btn_clear_demos.clicked.connect(self.clear_demos_cb)
 		home_layout.btn_u.clicked.connect(self.undo_cb)
 		home_layout.btn_rd.clicked.connect(self.redo_cb)
 		home_layout.btn_load.clicked.connect(self.load_config_file)
@@ -244,16 +247,32 @@ class LfDGui(QtGui.QMainWindow):
 
 	def writemodel_cb(self):
 		name = QtGui.QFileDialog.getSaveFileName(self, 'Save File')
-		pickle.dump((self.lfd.clf, self.lfd.retained_feats_names), open(name[0], 'wb'))
+		pickle.dump((self.lfd.clf, self.lfd.retained_feats_names, self.lfd.demo_states, self.lfd.demo_actions), open(name[0], 'wb'))
 		QtGui.QMessageBox.information(self, 'Success', 'Success in saving the model!')
 
 	def loadmodel_cb(self):
-		# TODO(Kevin): Load and save retained features
 		name = QtGui.QFileDialog.getOpenFileName(self, 'Open File')
-		(self.lfd.clf, self.lfd.retained_feats_names) = pickle.load(open(name[0], 'rb'))
+		(self.lfd.clf, self.lfd.retained_feats_names, self.lfd.demo_states, self.lfd.demo_actions) = pickle.load(open(name[0], 'rb'))
 		self.lfd.render_model()
 		QtGui.QMessageBox.information(self, 'Success', 'Success in loading the model!')
 
+	def write_demos_cb(self):
+		demo_file = QtGui.QFileDialog.getSaveFileName(self, 'Save File')[0]
+		self.write_demos(demo_file)
+		QtGui.QMessageBox.information(self, 'Success', 'Success in saving the demos!')
+
+	def write_demos(self, demo_file):
+		pickle.dump((self.lfd.demo_states, self.lfd.demo_actions), open(demo_file, 'wb'))
+
+	def load_demos_cb(self):
+		name = QtGui.QFileDialog.getOpenFileName(self, 'Open File')
+		(self.lfd.demo_states, self.lfd.demo_actions) = pickle.load(open(name[0], 'rb'))
+		QtGui.QMessageBox.information(self, 'Success', 'Success in loading the demos!')
+
+	def clear_demos_cb(self):
+		self.lfd.demo_states = None
+		self.lfd.demo_actions = None
+		QtGui.QMessageBox.information(self, 'Success', 'Success in clearing the demos!')
 
 	def rc_cb(self):
 		action_name = self.sender().objectName()
@@ -307,6 +326,9 @@ class LfDGui(QtGui.QMainWindow):
 		else:
 			self.lfd.demo_states = world_state
 			self.lfd.demo_actions = user_input
+
+		# Write to a temp file
+		self.write_demos('media/current.demos')
 
 		QtGui.QMessageBox.information(self, 'Success', 'Success in performing ' + action_name +'!')
 
@@ -414,6 +436,24 @@ class Home(QtGui.QWidget):
 		self.btn_wm.setFont(self.newFont)
 		self.btn_wm.move(0, 100)
 
+		self.btn_ld = QtGui.QPushButton("Load demos")
+		self.btn_ld.resize(self.btn_lm.minimumSizeHint())
+		self.btn_ld.setObjectName("Load demos")
+		self.btn_ld.setFont(self.newFont)
+		self.btn_ld.move(0, 100)
+
+		self.btn_wd = QtGui.QPushButton("Write demos")
+		self.btn_wd.resize(self.btn_wm.minimumSizeHint())
+		self.btn_wd.setObjectName("Write demos")
+		self.btn_wd.setFont(self.newFont)
+		self.btn_wd.move(0, 100)
+
+		self.btn_clear_demos = QtGui.QPushButton("Clear demos")
+		self.btn_clear_demos.resize(self.btn_wm.minimumSizeHint())
+		self.btn_clear_demos.setObjectName("Clear demos")
+		self.btn_clear_demos.setFont(self.newFont)
+		self.btn_clear_demos.move(0, 100)
+
 		self.btn_u = QtGui.QPushButton("Undo last demo")
 		self.btn_u.resize(self.btn_u.minimumSizeHint())
 		self.btn_u.setObjectName("Undo last demo")
@@ -436,6 +476,9 @@ class Home(QtGui.QWidget):
 		self.vlayout.addWidget(self.btn_r)
 		self.vlayout.addWidget(self.btn_lm)
 		self.vlayout.addWidget(self.btn_wm)
+		self.vlayout.addWidget(self.btn_ld)
+		self.vlayout.addWidget(self.btn_wd)
+		self.vlayout.addWidget(self.btn_clear_demos)
 		self.vlayout.addWidget(self.btn_u)
 		self.vlayout.addWidget(self.btn_rd)
 
