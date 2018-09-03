@@ -256,7 +256,7 @@ class LfD:
 
     def render_model(self):
         if self.tree is not None:
-            self.tree.blackboard_exchange.unregister_services()
+            self.stop_bt()
             self.tree = None
             self.bt_mode = None
         dot_data = tree.export_graphviz(
@@ -628,6 +628,11 @@ class LfD:
         rospy.on_shutdown(functools.partial(shutdown, tree))
 
         return tree
+
+    def stop_bt(self):
+        if self.tree is not None:
+            self.tree.interrupt()
+            self.tree.blackboard_exchange.unregister_services()
 
 
 def main():

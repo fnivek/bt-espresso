@@ -75,7 +75,8 @@ class LfDGui(QtGui.QMainWindow):
 		self.setCentralWidget(home_layout)
 		self.show()
 
-		# Turn off perception tree
+		# Turn off trees
+		self.lfd.stop_bt()
 		self.lfd.stop_perception_tree()
 
 	def display_action(self):
