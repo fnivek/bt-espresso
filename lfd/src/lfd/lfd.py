@@ -159,7 +159,7 @@ class LfD:
             if not fail:
                 break
 
-        print 'Blackboard:', self.blackboard
+        # print 'Blackboard:', self.blackboard
         print 'Actions:\n\t', self.action_names.values()
 
         # Features setup
