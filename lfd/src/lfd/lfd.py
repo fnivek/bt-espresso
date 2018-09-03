@@ -11,7 +11,8 @@ import os, os.path
 
 import graphviz
 
-from sklearn.svm import LinearSVC
+from sklearn.feature_selection import SelectPercentile, f_classif
+from sklearn.pipeline import Pipeline
 from sklearn import tree
 import numpy
 
@@ -99,32 +100,43 @@ class LfD:
         ]
 
         # Actions
-        self.actions = {
-            0: Action('extend_torso', BuildFullyExtendTorso),
-            1: Action('mid_torso', BuildMoveTorsoBehavior),
-            2: Action('pick', BuildPickBehavior),
-            3: Action('detect_centroid', BuildCentroidDetectorBehavior),
-            4: Action('tuck', BuildTuckWithCondBehavior),
-            5: Action('place', BuildPlaceBehavior),
-            6: Action('look_strait', BuildHeadMoveBehavior),
-            7: Action('update_joints', BuildUpdateJointsBehavior),
-            8: Action('relative forward', BuildRelativeMoveBehavior, amp=0.5, direction='forward'),
-            9: Action('say hello', BuildTTSBehavior, text='hello'),
-            # 10: Action('detect handle', BuildBagDetectBehavior),
-            # 11: Action('grab handle', BuildBagGrabBehavior),
-            # 12: Action('grasploc', BuildGrasplocBehavior),
-            # 13: Action('grasploc_pick', BuildGrasplocPickBehavior),
-            14: Action('detect_person', BuildPersonDetectorBehavior),
-            15: Action('look_at_person', BuildLookAtPersonBehavior),
-            16: Action('sleep', BuildSleepBehavior),
-            # 17: Action('object_detector', BuildObjectDetectorBehavior)
-        }
+        actions = [
+          Action('update_joints', BuildUpdateJointsBehavior),
+          Action('detect_centroid', BuildCentroidDetectorBehavior),
+          Action('detect_hand', BuildDetectHandHandBehavior),
+          Action('detect_person', BuildPersonDetectorBehavior),
+          Action('extend_torso', BuildFullyExtendTorso),
+          Action('mid_torso', BuildMoveTorsoBehavior),
+          Action('tuck', BuildTuckWithCondBehavior),
+          Action('pick', BuildPickBehavior),
+          Action('place', BuildPlaceBehavior),
+          Action('look_strait', BuildHeadMoveBehavior),
+          Action('look_at_person', BuildLookAtPersonBehavior),
+          Action('relative forward', BuildRelativeMoveBehavior, amp=0.5, direction='forward'),
+          Action('nav_to_home', BuildNavBehavior, param_server_name='/swag_delivery/pose_home'),
+          Action('nav_to_item1', BuildNavBehavior, param_server_name='/swag_delivery/pose_item1'),
+          Action('nav_to_item2', BuildNavBehavior, param_server_name='/swag_delivery/pose_item2'),
+          Action('nav_to_item3', BuildNavBehavior, param_server_name='/swag_delivery/pose_item3'),
+          Action('say hello', BuildTTSBehavior, text='hello'),
+          Action('say select item', BuildTTSBehavior, text='Please place your hand over the desired item'),
+          Action('say item 1', BuildTTSBehavior, text='You have selected item 1'),
+          Action('say item 2', BuildTTSBehavior, text='You have selected item 2'),
+          Action('say item 3', BuildTTSBehavior, text='You have selected item 3'),
+          Action('say Here is your item', BuildTTSBehavior, text='Here is your item'),
+          Action('sleep', BuildSleepBehavior),
+          # Action('detect handle', BuildBagDetectBehavior),
+          # Action('grab handle', BuildBagGrabBehavior),
+          # Action('grasploc', BuildGrasplocBehavior),
+          # Action('grasploc_pick', BuildGrasplocPickBehavior),
+          # Action('object_detector', BuildObjectDetectorBehavior)
+        ]
+        self.actions = dict(enumerate(actions))
         self.action_names = {}
         self.action_indices = {}
         for key, value in self.actions.iteritems():
             self.action_names[key] = str(value)
             self.action_indices[str(value)] = key
-        num_last_actions = 3
+        num_last_actions = 10
         self.last_actions = collections.deque(maxlen=num_last_actions)
         for _ in xrange(num_last_actions):
             self.last_actions.append(0)
@@ -155,7 +167,8 @@ class LfD:
             + ['LA' + str(num_last_actions - i) for i in xrange(self.last_actions.maxlen)]
             + [name + "_position" for name in self.joint_names]
             + [name + "_velocity" for name in self.joint_names]
-            + [name + "_effort" for name in self.joint_names])
+            + [name + "_effort" for name in self.joint_names]
+            + ['at_home', 'at_item1', 'at_item2', 'at_item3', 'arm_tucked', 'arm_2ed', 'arm_unknown_3ed', 'arm_4ed', 'arm_5ed', 'arm_6ed', 'arm_7ed'])
         print 'Features:\n\t', self.feature_names
 
         # Build a perception tree
@@ -174,10 +187,22 @@ class LfD:
     def build_perception_tree(self):
         # Define behaviors
         root = py_trees.composites.Parallel('perception_root')
-        get_joint_states = BuildUpdateJointsBehavior(name='perception_tree_get_joint_states')
-        detect_centroid = BuildCentroidDetectorBehavior(name='perception_tree_detect_centroid')
-        detect_person = BuildPersonDetectorBehavior(name='perception_tree_detect_person')
-        grasploc = BuildGrasplocBehavior(name='perception_tree_grasploc')
+        get_joint_states = BuildUpdateJointsBehavior(name='get_joint_states')
+        detect_centroid = BuildCentroidDetectorBehavior(name='detect_centroid')
+        detect_person = BuildPersonDetectorBehavior(name='detect_person')
+        grasploc = BuildGrasplocBehavior(name='grasploc')
+        at_home = BuildAtPoseBehavior(name='at_home', param_server_name='/swag_delivery/pose_home')
+        at_item1 = BuildAtPoseBehavior(name='at_item1', param_server_name='/swag_delivery/pose_item1')
+        at_item2 = BuildAtPoseBehavior(name='at_item2', param_server_name='/swag_delivery/pose_item2')
+        at_item3 = BuildAtPoseBehavior(name='at_item3', param_server_name='/swag_delivery/pose_item3')
+        arm_tucked = BuildArmTuckedBehavior(name='arm_tucked', tuck_pose='tuck')
+        arm_2ed = BuildArmTuckedBehavior(name='arm_2ed', tuck_pose=2)
+        arm_unknown_3ed = BuildArmTuckedBehavior(name='arm_unknown_3ed', tuck_pose='unknown_3')
+        arm_4ed = BuildArmTuckedBehavior(name='arm_4ed', tuck_pose=4)
+        arm_5ed = BuildArmTuckedBehavior(name='arm_5ed', tuck_pose=5)
+        arm_6ed = BuildArmTuckedBehavior(name='arm_6ed', tuck_pose=6)
+        arm_7ed = BuildArmTuckedBehavior(name='arm_7ed', tuck_pose=7)
+        arm_look_at_objed = BuildArmTuckedBehavior(name='arm_look_at_objed', tuck_pose='look_at_obj')
 
         # Define structure of tree
         root.add_children([
@@ -185,6 +210,18 @@ class LfD:
             # detect_centroid,
             # detect_person,
             # grasploc,
+            at_home,
+            at_item1,
+            at_item2,
+            at_item3,
+            arm_tucked,
+            arm_2ed,
+            arm_unknown_3ed,
+            arm_4ed,
+            arm_5ed,
+            arm_6ed,
+            arm_7ed,
+            arm_look_at_objed,
         ])
 
         return root
@@ -223,10 +260,10 @@ class LfD:
             self.tree = None
             self.bt_mode = None
         dot_data = tree.export_graphviz(
-            self.clf,
+            self.clf.named_steps['classification'],
             out_file=None,
             filled=True,
-            feature_names=self.feature_names,
+            feature_names=self.retained_feats_names,
             class_names=[self.action_names[action_id] for action_id in self.clf.classes_],
             impurity=False)
         graph = graphviz.Source(dot_data)
@@ -234,14 +271,31 @@ class LfD:
 
     # Produces a model from states
     def learn(self, states, actions):
-        print states
-        print "\n\n\n"
-        print actions
-        self.clf = tree.DecisionTreeClassifier()
+        # print states
+        # print "\n\n\n"
+        # print actions
+
+        self.clf = Pipeline([
+          ('feature_selection', SelectPercentile(f_classif, percentile=30)),
+          ('classification', tree.DecisionTreeClassifier(
+            max_depth=5,
+            class_weight='balanced',
+            min_samples_leaf=5,)),
+        ])
         self.clf.fit(states, actions)
+
+        # Print retained features
+        support_int = self.clf.named_steps['feature_selection'].get_support(True)
+        self.retained_feats_names = [self.feature_names[i] for i in support_int]
+        # for index in support_int:
+        #     self.retained_feats_names.append(self.feature_names[index])
+        print 'retained features:', self.retained_feats_names
+
         self.render_model()
 
     def execute_dt(self):
+        # TODO(Kevin): Update state
+        # TODO(Kevin): Transform state with feature selection filter
         state = self.get_state()
         print 'World state is:'
         self.print_state(state)
@@ -249,10 +303,11 @@ class LfD:
         action_id = self.clf.predict(state)[0]
         print 'Resulting action is: ' + self.action_names[action_id]
         self.run_action(action_id)
+        # TODO(Kevin): Write last action to last action list
 
     def execute(self):
         if self.tree == None:
-            self.tree = self.get_bt(self.clf)
+            self.tree = self.get_bt(self.clf.named_steps['classification'])
         state = self.get_state()
         self.write_state(state)
         # print 'World state is:'
@@ -262,7 +317,6 @@ class LfD:
     def get_state(self):
         # WARNING: Not thread safe!!!!
         #   Blackboard access is being made in the perception tree thread
-        # TODO(Kevin): Figure out how to ensure I get the correct joint states
         return numpy.array([[
             self.blackboard.centroid.centroid.position.x,
             self.blackboard.centroid.centroid.position.y,
@@ -275,6 +329,18 @@ class LfD:
         + [self.blackboard.get(name + "_position") for name in self.joint_names]
         + [self.blackboard.get(name + "_velocity") for name in self.joint_names]
         + [self.blackboard.get(name + "_effort") for name in self.joint_names]
+        + [self.blackboard.get(name) for name in [
+            'at_home',
+            'at_item1',
+            'at_item2',
+            'at_item3',
+            'arm_tucked',
+            'arm_2ed',
+            'arm_unknown_3ed',
+            'arm_4ed',
+            'arm_5ed',
+            'arm_6ed',
+            'arm_7ed',]]
         ])
         # return numpy.array([list(self.last_actions)])
 
@@ -478,7 +544,7 @@ class LfD:
             self.last_action_dict[bt] = struct.user_id
         if struct.node_type == dt_to_bt.BTNode.CONDITION:
             # Get info from dt
-            feature_name = self.feature_names[dt.tree_.feature[struct.user_id]]
+            feature_name = self.retained_feats_names[dt.tree_.feature[struct.user_id]]
             thres = dt.tree_.threshold[struct.user_id]
 
             # Negate if needed

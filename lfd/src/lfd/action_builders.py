@@ -6,11 +6,13 @@ from sensor_msgs.msg import JointState
 
 from centroid_detector_msgs.msg import DetectCentroidGoal, DetectCentroidAction
 from behavior_manager.interfaces.manipulation_behavior_new import FullyExtendTorso, MoveTorsoBehavior, PickBehavior, TuckWithCondBehavior, PlaceBehavior, GrasplocPickBehavior
+from behavior_manager.conditions.arm_tucked_condition import ArmTuckedCondition
 from behavior_manager.interfaces.centroid_detector_behavior import CentroidDetectorBehavior
 from behavior_manager.interfaces.head_actuate_behavior import HeadMoveBehavior
 from behavior_manager.interfaces.tts_behavior import TTSBehavior
 from behavior_manager.interfaces.update_joints_behavior import JointToBlackboardBehavior
 from behavior_manager.interfaces.navigation_behavior import *
+from behavior_manager.conditions.at_pose_condition import AtPoseCondition
 from behavior_manager.interfaces.detect_handles_behavior import DetectHandlesBehavior
 from behavior_manager.interfaces.grab_bag_behavior import GrabBagBehavior
 from behavior_manager.interfaces.grasploc_behavior import GrasplocBehavior
@@ -50,11 +52,11 @@ def BuildPickBehavior(name):
 def BuildCentroidDetectorBehavior(name):
     blackboard = py_trees.blackboard.Blackboard()
     blackboard.set(name + '/min_x', 0.0)
-    blackboard.set(name + '/max_x', 1.0)
+    blackboard.set(name + '/max_x', 1.5)
     blackboard.set(name + '/min_y', -0.5)
     blackboard.set(name + '/max_y', 0.5)
-    blackboard.set(name + '/min_z', 0.64)
-    blackboard.set(name + '/max_z', 1.12)
+    blackboard.set(name + '/min_z', 0.65)
+    blackboard.set(name + '/max_z', 1.00)
     return CentroidDetectorBehavior(name)
 def BuildPersonDetectorBehavior(name):
     blackboard = py_trees.blackboard.Blackboard()
@@ -64,6 +66,15 @@ def BuildPersonDetectorBehavior(name):
     blackboard.set(name + '/max_y', 0.5)
     blackboard.set(name + '/min_z', 1.5)
     blackboard.set(name + '/max_z', 2.0)
+    return CentroidDetectorBehavior(name)
+def BuildDetectHandHandBehavior(name):
+    blackboard = py_trees.blackboard.Blackboard()
+    blackboard.set(name + '/min_x', 0.0)
+    blackboard.set(name + '/max_x', 1.0)
+    blackboard.set(name + '/min_y', -0.5)
+    blackboard.set(name + '/max_y', 0.5)
+    blackboard.set(name + '/min_z', 0.80)
+    blackboard.set(name + '/max_z', 1.12)
     return CentroidDetectorBehavior(name)
 def BuildTuckWithCondBehavior(name):
     return TuckWithCondBehavior(name, 'tuck')
@@ -91,18 +102,28 @@ def BuildRelativeMoveBehavior(name, amp=0.5, direction='forward'):
     else:
         return None
 # Hardcoded behavior for grocery bag packing task
-def BuildNavToBagBehavior(name):
-    return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/grocery_bag_packing/pose_grocery_bag'))
-def BuildNavToItemsBehavior(name):
-    return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/grocery_bag_packing/pose_items'))
-def BuildNavToHomeBehavior(name):
-    return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/swag_delivery/pose_home'))
-def BuildNavToItem1Behavior(name):
-    return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/swag_delivery/pose_item1'))
-def BuildNavToItem2Behavior(name):
-    return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/swag_delivery/pose_item2'))
-def BuildNavToItem3Behavior(name):
-    return NavOverride('override', NavToPoseWithCondBehavior(name=name, param_server_name='/swag_delivery/pose_item3'))
+def BuildNavBehavior(name, *args, **kwargs):
+    return NavOverride(name + '_override', NavToPoseWithCondBehavior(name, *args, **kwargs))
+def BuildAtPoseBehavior(name, *args, **kwargs):
+    root = py_trees.composites.Selector(name='root_'+name)
+    seq = py_trees.composites.Sequence(name='seq_'+name)
+    cond_at_pose = AtPoseCondition(name, *args, **kwargs)
+    act_write_true = py_trees.blackboard.SetBlackboardVariable(name=name, variable_name=name, variable_value=True)
+    act_write_false = py_trees.blackboard.SetBlackboardVariable(name=name, variable_name=name, variable_value=False)
+
+    root.add_children([seq, act_write_false])
+    seq.add_children([cond_at_pose, act_write_true])
+    return root
+def BuildArmTuckedBehavior(name, tuck_pose='tuck'):
+    root = py_trees.composites.Selector(name='root_'+name)
+    seq = py_trees.composites.Sequence(name='seq_'+name)
+    cond_at_pose = ArmTuckedCondition(name, tuck_pose)
+    act_write_true = py_trees.blackboard.SetBlackboardVariable(name=name, variable_name=name, variable_value=True)
+    act_write_false = py_trees.blackboard.SetBlackboardVariable(name=name, variable_name=name, variable_value=False)
+
+    root.add_children([seq, act_write_false])
+    seq.add_children([cond_at_pose, act_write_true])
+    return root
 def BuildBagDetectBehavior(name):
     return DetectHandlesBehavior(name)
 def BuildBagGrabBehavior(name):

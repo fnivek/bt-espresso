@@ -215,8 +215,8 @@ class LfDGui(QtGui.QMainWindow):
 		yaml_file.close()
 		rosparam.upload_params('/', yaml_data)
 		# Check whether the nav actions have been created
-		if 'nav_to_bag' not in self.lfd.action_indices or 'nav_to_items' not in self.lfd.action_indices:
-			self.add_nav_behavior()
+		# if 'nav_to_bag' not in self.lfd.action_indices or 'nav_to_items' not in self.lfd.action_indices:
+		# 	self.add_nav_behavior()
 		QtGui.QMessageBox.information(self, 'Success', 'Success in loading configure file for nav behavior!')
 
 	def redo_cb(self):
@@ -247,6 +247,7 @@ class LfDGui(QtGui.QMainWindow):
 		QtGui.QMessageBox.information(self, 'Success', 'Success in saving the model!')
 
 	def loadmodel_cb(self):
+		# TODO(Kevin): Load and save retained features
 		name = QtGui.QFileDialog.getOpenFileName(self, 'Open File')
 		self.lfd.clf = pickle.load(open(name[0], 'rb'))
 		self.lfd.render_model()
@@ -260,7 +261,7 @@ class LfDGui(QtGui.QMainWindow):
 
 	def execute_cb(self):
 
-		if self.lfd.clf != None:
+		if self.lfd.clf.named_steps['classification'] != None:
 			execute_flag = True
 		else:
 			execute_flag = False
@@ -600,7 +601,7 @@ class execThread(threading.Thread):
 				self.lfd.tree.blackboard_exchange.unregister_services()
 			if self.lfd.bt_mode != 'CDNF':
 				start = time()
-				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='CDNF')
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf.named_steps['classification'], bt_type='CDNF')
 				stop = time()
 				print 'CDNF time: ' + str(stop - start)
 			while not self.interrupt_flag:
@@ -611,7 +612,7 @@ class execThread(threading.Thread):
 				self.lfd.tree.blackboard_exchange.unregister_services()
 			if self.lfd.bt_mode != 'Naive':
 				start = time()
-				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='Naive')
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf.named_steps['classification'], bt_type='Naive')
 				stop = time()
 				print 'Naive time: ' + str(stop - start)
 			while not self.interrupt_flag:
@@ -622,7 +623,7 @@ class execThread(threading.Thread):
 				self.lfd.tree.blackboard_exchange.unregister_services()
 			if self.lfd.bt_mode != 'SOP':
 				start = time()
-				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='SOP')
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf.named_steps['classification'], bt_type='SOP')
 				stop = time()
 				print 'SOP time: ' + str(stop - start)
 			while not self.interrupt_flag:
@@ -633,7 +634,7 @@ class execThread(threading.Thread):
 				self.lfd.tree.blackboard_exchange.unregister_services()
 			if self.lfd.bt_mode != 'Espresso':
 				start = time()
-				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf, bt_type='Espresso')
+				self.lfd.tree = self.lfd.get_bt(dt=self.lfd.clf.named_steps['classification'], bt_type='Espresso')
 				stop = time()
 				print 'Espresso time: ' + str(stop - start)
 			while not self.interrupt_flag:
