@@ -169,6 +169,7 @@ class LfD:
             + [name + "_velocity" for name in self.joint_names]
             + [name + "_effort" for name in self.joint_names]
             + ['at_home', 'at_item1', 'at_item2', 'at_item3', 'arm_tucked', 'arm_2ed', 'arm_unknown_3ed', 'arm_4ed', 'arm_5ed', 'arm_6ed', 'arm_7ed'])
+        self.retained_feats_names = list(self.feature_names)
         print 'Features:\n\t', self.feature_names
 
         # Build a perception tree
@@ -584,6 +585,7 @@ class LfD:
         #   threshold - the value to threshold on feat <= thres
         #   feature - the feature to split on
         #   value - the node_count by n_outputs=1, max_n_classes array containing the output
+        #   TODO(Kevin): When using balanced weighting all values are binary either 0 or the same >0 float
         clf = [
             dt.classes_[numpy.argmax(dt.tree_.value[node_id][0])]
             for node_id in xrange(len(dt.tree_.children_left))

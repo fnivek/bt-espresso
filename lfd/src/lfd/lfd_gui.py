@@ -244,13 +244,13 @@ class LfDGui(QtGui.QMainWindow):
 
 	def writemodel_cb(self):
 		name = QtGui.QFileDialog.getSaveFileName(self, 'Save File')
-		pickle.dump(self.lfd.clf, open(name[0], 'wb'))
+		pickle.dump((self.lfd.clf, self.lfd.retained_feats_names), open(name[0], 'wb'))
 		QtGui.QMessageBox.information(self, 'Success', 'Success in saving the model!')
 
 	def loadmodel_cb(self):
 		# TODO(Kevin): Load and save retained features
 		name = QtGui.QFileDialog.getOpenFileName(self, 'Open File')
-		self.lfd.clf = pickle.load(open(name[0], 'rb'))
+		(self.lfd.clf, self.lfd.retained_feats_names) = pickle.load(open(name[0], 'rb'))
 		self.lfd.render_model()
 		QtGui.QMessageBox.information(self, 'Success', 'Success in loading the model!')
 
