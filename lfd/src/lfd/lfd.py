@@ -108,7 +108,14 @@ class LfD:
           Action('extend_torso', BuildFullyExtendTorso),
           Action('mid_torso', BuildMoveTorsoBehavior),
           Action('tuck', BuildTuckWithCondBehavior),
-          Action('pick', BuildPickBehavior),
+          Action('tuck_unkown3', BuildTuckWithCondBehavior, 'unknown_3'),
+          Action('pick_centroid', BuildPickBehavior),
+          Action('pick_anything', BuildPickAnythingBehavior),
+          Action('pick_obj', BuildPickObjBehavior),
+          Action('set_target_t-shirt', BuildSetObjDetectorTarget, 't-shirt'),
+          Action('set_target_red_hat', BuildSetObjDetectorTarget, 'red hat'),
+          Action('set_target_bag', BuildSetObjDetectorTarget, 'bag'),
+          Action('set_target_golf_box', BuildSetObjDetectorTarget, 'golf box'),
           Action('place', BuildPlaceBehavior),
           Action('look_strait', BuildHeadMoveBehavior),
           Action('look_at_person', BuildLookAtPersonBehavior),
@@ -145,6 +152,8 @@ class LfD:
         self.blackboard = py_trees.blackboard.Blackboard()
         print 'Run a bunch of actions to init blackboard and robot'
         self.run_action('detect_centroid')
+        self.run_action('detect_hand')
+        self.run_action('detect_person')
         self.run_action('extend_torso')
         self.run_action('tuck')
         self.run_action('look_strait')
@@ -163,7 +172,9 @@ class LfD:
         print 'Actions:\n\t', self.action_names.values()
 
         # Features setup
-        self.feature_names = (['Cx', 'Cy', 'Cz', 'Csuccess']
+        self.feature_names = (
+              ['person_detected', 'centroid_detected', 'hand_detected', 'hand_y']
+              # TODO(Kevin): Develop a way to allow indices of last actions to be different for different models
             + ['LA' + str(num_last_actions - i) for i in xrange(self.last_actions.maxlen)]
             + [name + "_position" for name in self.joint_names]
             + [name + "_velocity" for name in self.joint_names]
@@ -189,9 +200,6 @@ class LfD:
         # Define behaviors
         root = py_trees.composites.Parallel('perception_root')
         get_joint_states = BuildUpdateJointsBehavior(name='get_joint_states')
-        detect_centroid = BuildCentroidDetectorBehavior(name='detect_centroid')
-        detect_person = BuildPersonDetectorBehavior(name='detect_person')
-        grasploc = BuildGrasplocBehavior(name='grasploc')
         at_home = BuildAtPoseBehavior(name='at_home', param_server_name='/swag_delivery/pose_home')
         at_item1 = BuildAtPoseBehavior(name='at_item1', param_server_name='/swag_delivery/pose_item1')
         at_item2 = BuildAtPoseBehavior(name='at_item2', param_server_name='/swag_delivery/pose_item2')
@@ -208,9 +216,6 @@ class LfD:
         # Define structure of tree
         root.add_children([
             get_joint_states,
-            # detect_centroid,
-            # detect_person,
-            # grasploc,
             at_home,
             at_item1,
             at_item2,
@@ -265,7 +270,7 @@ class LfD:
             out_file=None,
             filled=True,
             feature_names=self.retained_feats_names,
-            class_names=[self.action_names[action_id] for action_id in self.clf.classes_],
+            class_names=[action_name for action_name in self.clf.classes_],
             impurity=False)
         graph = graphviz.Source(dot_data)
         graph.render('media/tree')
@@ -277,11 +282,11 @@ class LfD:
         # print actions
 
         self.clf = Pipeline([
-          ('feature_selection', SelectPercentile(f_classif, percentile=30)),
+          ('feature_selection', SelectPercentile(f_classif, percentile=100)),
           ('classification', tree.DecisionTreeClassifier(
-            max_depth=15,
+            # max_depth=15,
             class_weight='balanced',
-            min_samples_leaf=2,
+            # min_samples_leaf=2,
             )),
         ])
         self.clf.fit(states, actions)
@@ -297,7 +302,6 @@ class LfD:
 
     def execute_dt(self):
         # TODO(Kevin): Update state
-        # TODO(Kevin): Transform state with feature selection filter
         state = self.get_state()
         print 'World state is:'
         self.print_state(state)
@@ -319,14 +323,13 @@ class LfD:
     def get_state(self):
         # WARNING: Not thread safe!!!!
         #   Blackboard access is being made in the perception tree thread
-        return numpy.array([[
-            self.blackboard.centroid.centroid.position.x,
-            self.blackboard.centroid.centroid.position.y,
-            self.blackboard.centroid.centroid.position.z,
-            self.blackboard.centroid.success,
-        ] # + list(self.blackboard.joint_states.position)
-          # + list(self.blackboard.joint_states.velocity)
-          # + list(self.blackboard.joint_states.effort)
+        return numpy.array([
+          [
+            self.blackboard.detect_person.success,
+            self.blackboard.detect_centroid.success,
+            self.blackboard.detect_hand.success,
+            self.blackboard.detect_hand.centroid.position.y
+          ]
         + list(self.last_actions)
         + [self.blackboard.get(name + "_position") for name in self.joint_names]
         + [self.blackboard.get(name + "_velocity") for name in self.joint_names]
@@ -540,10 +543,11 @@ class LfD:
         if struct.node_type == dt_to_bt.BTNode.SEQUENCE:
             bt = py_trees.composites.Sequence(struct.name)
         if struct.node_type == dt_to_bt.BTNode.ACTION:
-            name = self.action_names[struct.user_id]
-            action = self.actions[struct.user_id]
+            name = struct.user_id
+            index = self.action_indices[struct.user_id]
+            action = self.actions[index]
             bt = action.get_builder()(name, *action.builder_args, **action.builder_kwargs)
-            self.last_action_dict[bt] = struct.user_id
+            self.last_action_dict[bt] = index
         if struct.node_type == dt_to_bt.BTNode.CONDITION:
             # Get info from dt
             feature_name = self.retained_feats_names[dt.tree_.feature[struct.user_id]]

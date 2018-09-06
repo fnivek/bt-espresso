@@ -13,6 +13,7 @@ import threading
 import os
 import subprocess
 import shlex
+from sets import Set
 
 
 class MinSOPThread(threading.Thread):
@@ -139,6 +140,9 @@ def dt_to_min_sop_espresso(true_children, false_children, clf):
 
     Create a subprocess to run Espresso algorithm
     """
+    clf_dict = dict(enumerate(Set(clf)))
+    clf_dict_rev = {v: k for k, v in clf_dict.iteritems()}
+    clf_int = [clf_dict_rev[name] for name in clf]
     # Hardcode the path. It may be problematic.
     os.chdir(os.path.expanduser('~/catkin_ws/src/mobile_manipulation/lfd/lfd/src/lfd'))
     cmd_line = './dt_to_bt_espresso.py '
@@ -148,7 +152,7 @@ def dt_to_min_sop_espresso(true_children, false_children, clf):
     for x in false_children:
         cmd_line += str(x)
         cmd_line += ' '
-    for x in clf:
+    for x in clf_int:
         cmd_line += str(x)
         cmd_line += ' '
     args = shlex.split(cmd_line)
@@ -156,7 +160,7 @@ def dt_to_min_sop_espresso(true_children, false_children, clf):
     result_str = espresso_proc.stdout.readlines()[0]
     path_dict = eval(result_str[0:(len(result_str) - 1)])
 
-    return path_dict
+    return {clf_dict[k]: v for k, v in path_dict.iteritems()}
 
 
 class BTNode:
@@ -255,9 +259,9 @@ def min_sop_to_bt_cond(min_sop):
         if len(minterm) == 1:
             cond = minterm[0]
             cond_node = BTNode(
-                'cond_{0}{1}'.format('' if cond[1] else '~', cond[0]), 
-                BTNode.CONDITION, 
-                user_id=cond[0], 
+                'cond_{0}{1}'.format('' if cond[1] else '~', cond[0]),
+                BTNode.CONDITION,
+                user_id=cond[0],
                 neg_cond=not cond[1]
             )
             or_node.add_child(cond_node)

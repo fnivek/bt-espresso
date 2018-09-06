@@ -2,7 +2,6 @@
   <include file="$(find grasploc_wrapper)/launch/grasploc_wrapper.launch"/>
   <include file="$(find fetch_manipulation_pipeline)/launch/fetch_manipulation_pipeline.launch"/>
   <include file="$(find centroid_detector)/launch/centroid_detector.launch"/>
-  <include file="$(find head_move)/launch/head_move.launch"/>
   <include file="$(find bag_handle_detector)/launch/bag_handle_detector.launch"/>
   <node name="grab_bag" pkg="fetch_manipulation_pipeline" type="grab_bag" respawn="true" output="screen"/>
   <!-- Behavior tree gui -->

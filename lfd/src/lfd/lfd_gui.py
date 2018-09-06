@@ -45,6 +45,10 @@ class LfDGui(QtGui.QMainWindow):
 		fileMenu = mainMenu.addMenu('&Exit')
 		fileMenu.addAction(exitAction)
 
+		# Add a timer for displaying state
+		self.state_timer = QtCore.QTimer(self)
+		self.state_timer.setInterval(42) # Meaning of life or 24fps
+
 		# Show the home interface
 		self.display_home()
 
@@ -71,6 +75,8 @@ class LfDGui(QtGui.QMainWindow):
 		home_layout.btn_load.clicked.connect(self.load_config_file)
 		home_layout.btn_quit.clicked.connect(self.closeEvent)
 
+		self.state_timer.stop()
+
 		# Show the layout
 		self.setGeometry(200, 200, 750, 500)
 		self.setWindowTitle("Learning from Demonstration")
@@ -89,8 +95,8 @@ class LfDGui(QtGui.QMainWindow):
 		'''
 
 		# Action interface layout
-		action_interface_layout = ActionInterface()
-		action_interface_layout.state_label.setText(self.lfd.state_to_str(self.lfd.get_state()))
+		self.action_interface_layout = ActionInterface()
+		self.state_timer.start()
 
 		# Choose callback function
 		if self.sender().objectName() == "Demonstrate":
@@ -107,41 +113,49 @@ class LfDGui(QtGui.QMainWindow):
 			button = QtGui.QPushButton(name)
 			button.setObjectName(name)
 			button.clicked.connect(self.button_cb)
-			button.setFont(action_interface_layout.newFont)
-			action_interface_layout.but_layout.addWidget(button)
+			button.setFont(self.action_interface_layout.newFont)
+			self.action_interface_layout.but_layout.addWidget(button)
 
-		action_interface_layout.but_layout.addStretch()
+		self.action_interface_layout.but_layout.addStretch()
 
 		# Label
-		action_interface_layout.back_label = QtGui.QLabel()
-		action_interface_layout.back_label.setText("Options:")
-		action_interface_layout.back_label.setFont(action_interface_layout.menu_font)
+		self.action_interface_layout.back_label = QtGui.QLabel()
+		self.action_interface_layout.back_label.setText("Options:")
+		self.action_interface_layout.back_label.setFont(self.action_interface_layout.menu_font)
 
-		action_interface_layout.but_layout.addWidget(action_interface_layout.back_label)
+		self.action_interface_layout.but_layout.addWidget(self.action_interface_layout.back_label)
 
 		# Go Back Button
-		action_interface_layout.back_btn = QtGui.QPushButton("Go Back")
-		action_interface_layout.back_btn.setFont(action_interface_layout.newFont)
-		action_interface_layout.but_layout.addWidget(action_interface_layout.back_btn)
+		self.action_interface_layout.back_btn = QtGui.QPushButton("Go Back")
+		self.action_interface_layout.back_btn.setFont(self.action_interface_layout.newFont)
+		self.action_interface_layout.but_layout.addWidget(self.action_interface_layout.back_btn)
 
 		# Set up go back button connections
-		action_interface_layout.back_btn.clicked.connect(self.display_home)
+		self.action_interface_layout.back_btn.clicked.connect(self.display_home)
 
 		# Button for add TTS behaviors
-		action_interface_layout.tts_btn = QtGui.QPushButton("Add TTS Behavior")
-		action_interface_layout.tts_btn.setFont(action_interface_layout.newFont)
-		action_interface_layout.but_layout.addWidget(action_interface_layout.tts_btn)
+		self.action_interface_layout.tts_btn = QtGui.QPushButton("Add TTS Behavior")
+		self.action_interface_layout.tts_btn.setFont(self.action_interface_layout.newFont)
+		self.action_interface_layout.but_layout.addWidget(self.action_interface_layout.tts_btn)
 
 		# Set up add tts button connections
-		action_interface_layout.tts_btn.clicked.connect(self.display_tts)
+		self.action_interface_layout.tts_btn.clicked.connect(self.display_tts)
+
+		# Update state
+		self.action_interface_layout.state_label.setText(self.lfd.state_to_str(self.lfd.get_state()))
+		self.state_timer.timeout.connect(self.update_state)
 
 		# Show the layout
-		self.setCentralWidget(action_interface_layout)
+		self.setCentralWidget(self.action_interface_layout)
 		self.show()
 
 		# Restart perception tree
 		self.lfd.stop_perception_tree()
 		self.lfd.start_perception_tree()
+
+	@QtCore.pyqtSlot()
+	def update_state(self):
+		self.action_interface_layout.state_label.setText(self.lfd.state_to_str(self.lfd.get_state()))
 
 	def display_exec(self):
 		# Execute interface layout
@@ -296,7 +310,10 @@ class LfDGui(QtGui.QMainWindow):
 			# Show the interface
 			self.display_exec()
 			# Create a new thread for ticking the tree
-			self.executingThread = execThread('execThread', self.lfd, self.sender().objectName())
+			mode = self.sender().objectName()
+			if mode == 'Execute_dt':
+				self.lfd.start_perception_tree()
+			self.executingThread = execThread('execThread', self.lfd, mode)
 			self.executingThread.start()
 
 	def interrupt_exec(self):
@@ -305,6 +322,7 @@ class LfDGui(QtGui.QMainWindow):
 		# Stop the running thread
 		self.executingThread.interrupt_flag = True
 		self.executingThread = None
+		self.lfd.stop_perception_tree()
 		QtGui.QMessageBox.information(self, 'Success', 'Stop the execution!')
 		self.display_home()
 
@@ -316,8 +334,8 @@ class LfDGui(QtGui.QMainWindow):
 		world_state = self.lfd.get_state()
 		print('World state is')
 		self.lfd.print_state(world_state)
-		action_name = self.sender().objectName()
-		user_input = numpy.array([[int(self.lfd.action_indices[action_name])]])
+		action_name = str(self.sender().objectName())
+		user_input = numpy.array([[action_name]])
 		self.lfd.run_action(action_name)
 		# Save the state action combo
 		if self.lfd.demo_states is not None:
