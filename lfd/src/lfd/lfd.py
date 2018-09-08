@@ -135,6 +135,9 @@ class LfD:
           Action('nav_to_item1', BuildNavBehavior, param_server_name='/swag_delivery/pose_item1'),
           Action('nav_to_item2', BuildNavBehavior, param_server_name='/swag_delivery/pose_item2'),
           Action('nav_to_item3', BuildNavBehavior, param_server_name='/swag_delivery/pose_item3'),
+          Action('nav_to_item4', BuildNavBehavior, param_server_name='/swag_delivery/pose_item4'),
+          Action('nav_to_item5', BuildNavBehavior, param_server_name='/swag_delivery/pose_item5'),
+          Action('nav_to_item6', BuildNavBehavior, param_server_name='/swag_delivery/pose_item6'),
           Action('say hello', BuildTTSBehavior, text='hello'),
           Action('say select item', BuildTTSBehavior, text='Please place your hand over the desired item'),
           Action('say item 1', BuildTTSBehavior, text='You have selected item 1'),
@@ -163,6 +166,7 @@ class LfD:
 
         # Blackboard setup
         self.blackboard = py_trees.blackboard.Blackboard()
+        self.blackboard.set('duster_orientation', 0)
         print 'Run a bunch of actions to init blackboard and robot'
         self.run_action('detect_centroid')
         self.run_action('detect_hand')
@@ -193,7 +197,7 @@ class LfD:
             + [name + "_position" for name in self.joint_names]
             + [name + "_velocity" for name in self.joint_names]
             + [name + "_effort" for name in self.joint_names]
-            + ['at_home', 'at_item1', 'at_item2', 'at_item3', 'arm_tucked', 'arm_2ed', 'arm_unknown_3ed', 'arm_4ed', 'arm_5ed', 'arm_6ed', 'arm_7ed'])
+            + ['at_home', 'at_item1', 'at_item2', 'at_item3', 'at_item4', 'at_item5', 'at_item6', 'arm_tucked', 'arm_2ed', 'arm_unknown_3ed', 'arm_4ed', 'arm_5ed', 'arm_6ed', 'arm_7ed'])
         self.retained_feats_names = list(self.feature_names)
         print 'Features:\n\t', self.feature_names
 
@@ -218,6 +222,9 @@ class LfD:
         at_item1 = BuildAtPoseBehavior(name='at_item1', param_server_name='/swag_delivery/pose_item1')
         at_item2 = BuildAtPoseBehavior(name='at_item2', param_server_name='/swag_delivery/pose_item2')
         at_item3 = BuildAtPoseBehavior(name='at_item3', param_server_name='/swag_delivery/pose_item3')
+        at_item1 = BuildAtPoseBehavior(name='at_item4', param_server_name='/swag_delivery/pose_item4')
+        at_item2 = BuildAtPoseBehavior(name='at_item5', param_server_name='/swag_delivery/pose_item5')
+        at_item3 = BuildAtPoseBehavior(name='at_item6', param_server_name='/swag_delivery/pose_item6')
         arm_tucked = BuildArmTuckedBehavior(name='arm_tucked', tuck_pose='tuck')
         arm_2ed = BuildArmTuckedBehavior(name='arm_2ed', tuck_pose=2)
         arm_unknown_3ed = BuildArmTuckedBehavior(name='arm_unknown_3ed', tuck_pose='unknown_3')
@@ -355,6 +362,9 @@ class LfD:
             'at_item1',
             'at_item2',
             'at_item3',
+            'at_item4',
+            'at_item5',
+            'at_item6',
             'arm_tucked',
             'arm_2ed',
             'arm_unknown_3ed',
