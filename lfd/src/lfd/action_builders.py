@@ -17,7 +17,9 @@ from behavior_manager.interfaces.grab_bag_behavior import GrabBagBehavior
 from behavior_manager.interfaces.grasploc_behavior import GrasplocBehavior
 from behavior_manager.interfaces.sleep_behavior import SleepBehavior
 from behavior_manager.interfaces.object_detector_behavior import ObjectDetectorBehavior
-from behavior_manager.interfaces.gripper_control_behavior import GripperControlBehavior
+# TODO(Someone): Figure out how to actually import the module
+from lfd_behaviors import GetFeatherDusterOrientation, GetMFCDusterOrientation
+from behavior_manager.interfaces.fetch_manipulation_behavior import ControlGripperBehavior
 
 class Action:
     def __init__(self, name, builder, *builder_args, **builder_kwargs):
@@ -190,9 +192,9 @@ def BuildPickAnythingBehavior(name):
 
     return seq_root
 def BuildOpenGripperBehavior(name):
-    return GripperControlBehavior(name, open_flag=True)
+    return ControlGripperBehavior(name, 1.0)
 def BuildCloseGripperBehavior(name):
-    return GripperControlBehavior(name, open_flag=False)
+    return ControlGripperBehavior(name, 0.0)
 def BuildGetFeatherDusterOrientation(name):
     seq = py_trees.composites.Sequence(name)
     seq.add_children([

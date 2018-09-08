@@ -6,7 +6,8 @@ import functools
 import rospy
 import py_trees
 import py_trees_ros
-from lfd import GetDusterOrientation
+from lfd_behaviors import GetFeatherDusterOrientation, GetMFCDusterOrientation
+from action_builders import *
 
 def build_tree():
     root = py_trees.composites.Sequence(name='test_nav_behaviors_and_conds')
