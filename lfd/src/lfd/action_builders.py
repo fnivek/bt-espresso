@@ -176,7 +176,7 @@ def BuildPickAnythingBehavior(name):
     act_move_head_down = HeadMoveJointBehavior('head_move_joint_down', pan=0, tilt=0.906)
     act_detect_centroid = CentroidDetectorBehavior(name)
     act_grasploc = GrasplocBehavior('grasploc', 'centroid')
-    act_grasploc_pick = GrasplocPickBehavior(name='grasplocPick')
+    act_grasploc_pick = GrasplocPickBehavior(name='grasplocPick') #, filter_off=True)
     act_tuck_arm = TuckWithCondBehavior(name, 'unknown_3')
     seq_root = py_trees.composites.Sequence(name=name)
 
@@ -193,3 +193,13 @@ def BuildOpenGripperBehavior(name):
     return GripperControlBehavior(name, open_flag=True)
 def BuildCloseGripperBehavior(name):
     return GripperControlBehavior(name, open_flag=False)
+def BuildGetFeatherDusterOrientation(name):
+    seq = py_trees.composites.Sequence(name)
+    seq.add_children([
+      py_trees.blackboard.SetBlackboardVariable(name=name, variable_name='item', variable_value='feather'),
+      ObjectDetectorBehavior('act_detect_item'),
+      GetFeatherDusterOrientation(name),
+    ])
+    return seq
+def BuildGetMFCDusterOrientation(name):
+    return GetMFCDusterOrientation(name)
