@@ -187,7 +187,7 @@ class LfD:
 
         # Features setup
         self.feature_names = (
-              ['person_detected', 'centroid_detected', 'hand_detected', 'hand_y', 'item']
+              ['person_detected', 'centroid_detected', 'hand_detected', 'hand_y', 'item', 'duster_orientation']
               # TODO(Kevin): Develop a way to allow indices of last actions to be different for different models
             + ['LA' + str(num_last_actions - i) for i in xrange(self.last_actions.maxlen)]
             + [name + "_position" for name in self.joint_names]
@@ -344,6 +344,7 @@ class LfD:
             self.blackboard.detect_hand.success,
             self.blackboard.detect_hand.centroid.position.y,
             self.item_name_to_index_dict[self.blackboard.get('item')],
+            self.blackboard.get('duster_orientation'),
           ]
         + list(self.last_actions)
         + [self.blackboard.get(name + "_position") for name in self.joint_names]
