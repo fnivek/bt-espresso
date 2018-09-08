@@ -161,6 +161,7 @@ class LfD:
         self.run_action('extend_torso')
         self.run_action('tuck')
         self.run_action('look_strait')
+        self.run_action('set_target_handle')
         while True:
             self.run_action('update_joints')
             fail = False
@@ -177,7 +178,7 @@ class LfD:
 
         # Features setup
         self.feature_names = (
-              ['person_detected', 'centroid_detected', 'hand_detected', 'hand_y']
+              ['person_detected', 'centroid_detected', 'hand_detected', 'hand_y', 'item']
               # TODO(Kevin): Develop a way to allow indices of last actions to be different for different models
             + ['LA' + str(num_last_actions - i) for i in xrange(self.last_actions.maxlen)]
             + [name + "_position" for name in self.joint_names]
@@ -332,7 +333,8 @@ class LfD:
             self.blackboard.detect_person.success,
             self.blackboard.detect_centroid.success,
             self.blackboard.detect_hand.success,
-            self.blackboard.detect_hand.centroid.position.y
+            self.blackboard.detect_hand.centroid.position.y,
+            self.blackboard.get('item'),
           ]
         + list(self.last_actions)
         + [self.blackboard.get(name + "_position") for name in self.joint_names]
