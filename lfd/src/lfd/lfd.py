@@ -99,6 +99,15 @@ class LfD:
             "r_gripper_finger_joint",
         ]
 
+        # Dict for converting item name to index as feature
+        # TODO(Allen): Make a global dictionary in other places
+        self.item_name_to_index_dict = {
+            'feather': 0,
+            'handle': 1,
+            'mfc_top': 2,
+            'mfc_bottom': 3
+        }
+
         # Actions
         actions = [
           Action('update_joints', BuildUpdateJointsBehavior),
@@ -334,7 +343,7 @@ class LfD:
             self.blackboard.detect_centroid.success,
             self.blackboard.detect_hand.success,
             self.blackboard.detect_hand.centroid.position.y,
-            self.blackboard.get('item'),
+            self.item_name_to_index_dict[self.blackboard.get('item')],
           ]
         + list(self.last_actions)
         + [self.blackboard.get(name + "_position") for name in self.joint_names]
