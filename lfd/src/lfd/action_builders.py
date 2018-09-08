@@ -51,7 +51,11 @@ def BuildMoveTorsoBehavior(name):
 def BuildPickBehavior(name):
     blackboard = py_trees.blackboard.Blackboard()
     blackboard.set('shelf', String('shelf2'))
-    return PickBehavior(name, centroid_bb_key='detect_centroid')
+    seq = py_trees.composites.Sequence(name)
+    seq.add_children([
+      TuckWithCondBehavior(name, 'tuck'),
+      PickBehavior(name, centroid_bb_key='detect_centroid')])
+    return seq
 def BuildCentroidDetectorBehavior(name):
     blackboard = py_trees.blackboard.Blackboard()
     blackboard.set(name + '/min_x', 0.0)
@@ -148,21 +152,23 @@ def BuildPickObjBehavior(name):
     blackboard.set(name + '/min_z', 0.62)
     blackboard.set(name + '/max_z', 1.12)
 
+    act_tuck_arm = TuckWithCondBehavior('act_tuck_arm', 'tuck')
     act_move_head_down = HeadMoveJointBehavior('head_move_joint_down', pan=0, tilt=0.906)
     act_detect_item = ObjectDetectorBehavior('act_detect_item', bounding_box_bb_key=name+'/bb')
     act_detect_centroid = CentroidDetectorBehavior(name, bounding_box_bb_key=name+'/bb')
     act_grasploc = GrasplocBehavior('grasploc', 'centroid')
     act_grasploc_pick = GrasplocPickBehavior(name='grasplocPick')
-    act_tuck_arm = TuckWithCondBehavior(name, 'unknown_3')
+    act_tuck3_arm = TuckWithCondBehavior(name, 'unknown_3')
     seq_root = py_trees.composites.Sequence(name=name)
 
     seq_root.add_children([
+      act_tuck_arm,
       act_move_head_down,
       act_detect_item,
       act_detect_centroid,
       act_grasploc,
       act_grasploc_pick,
-      act_tuck_arm
+      act_tuck3_arm
     ])
 
     return seq_root
@@ -175,19 +181,21 @@ def BuildPickAnythingBehavior(name):
     blackboard.set(name + '/min_z', 0.62)
     blackboard.set(name + '/max_z', 1.12)
 
+    act_tuck_arm = TuckWithCondBehavior('act_tuck_arm', 'tuck')
     act_move_head_down = HeadMoveJointBehavior('head_move_joint_down', pan=0, tilt=0.906)
     act_detect_centroid = CentroidDetectorBehavior(name)
     act_grasploc = GrasplocBehavior('grasploc', 'centroid')
     act_grasploc_pick = GrasplocPickBehavior(name='grasplocPick') #, filter_off=True)
-    act_tuck_arm = TuckWithCondBehavior(name, 'unknown_3')
+    act_tuck3_arm = TuckWithCondBehavior(name, 'unknown_3')
     seq_root = py_trees.composites.Sequence(name=name)
 
     seq_root.add_children([
+      act_tuck_arm,
       act_move_head_down,
       act_detect_centroid,
       act_grasploc,
       act_grasploc_pick,
-      act_tuck_arm
+      act_tuck3_arm
     ])
 
     return seq_root
