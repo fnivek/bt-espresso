@@ -131,6 +131,8 @@ class LfD:
           Action('say item 3', BuildTTSBehavior, text='You have selected item 3'),
           Action('say Here is your item', BuildTTSBehavior, text='Here is your item'),
           Action('sleep', BuildSleepBehavior),
+          Action('open_gripper', BuildOpenGripperBehavior),
+          Action('close_gripper', BuildCloseGripperBehavior),
           # Action('detect handle', BuildBagDetectBehavior),
           # Action('grab handle', BuildBagGrabBehavior),
           # Action('grasploc', BuildGrasplocBehavior),
