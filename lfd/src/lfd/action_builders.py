@@ -3,9 +3,10 @@ import py_trees_ros
 
 from std_msgs.msg import String
 from sensor_msgs.msg import JointState
+from geometry_msgs.msg import Pose
 
 from centroid_detector_msgs.msg import DetectCentroidGoal, DetectCentroidAction
-from behavior_manager.interfaces.manipulation_behavior_new import FullyExtendTorso, MoveTorsoBehavior, PickBehavior, TuckWithCondBehavior, PlaceBehavior, GrasplocPickBehavior, HeadMoveJointBehavior, HeadMoveBehavior
+from behavior_manager.interfaces.manipulation_behavior_new import FullyExtendTorso, MoveTorsoBehavior, PickBehavior, TuckWithCondBehavior, PlaceBehavior, GrasplocPickBehavior, HeadMoveJointBehavior, HeadMoveBehavior, DustingBehavior
 from behavior_manager.conditions.arm_tucked_condition import ArmTuckedCondition
 from behavior_manager.interfaces.centroid_detector_behavior import CentroidDetectorBehavior
 from behavior_manager.interfaces.tts_behavior import TTSBehavior
@@ -19,7 +20,7 @@ from behavior_manager.interfaces.sleep_behavior import SleepBehavior
 from behavior_manager.interfaces.object_detector_behavior import ObjectDetectorBehavior
 # TODO(Someone): Figure out how to actually import the module
 from lfd_behaviors import GetFeatherDusterOrientation, GetMFCDusterOrientation
-from behavior_manager.interfaces.fetch_manipulation_behavior import ControlGripperBehavior
+from behavior_manager.interfaces.fetch_manipulation_behavior import ControlGripperBehavior, LoadAndExecuteTrajectoryBehavior, AddBoxBehavior, RemoveCollisionObjBehavior
 
 class Action:
     def __init__(self, name, builder, *builder_args, **builder_kwargs):
@@ -152,6 +153,7 @@ def BuildPickObjBehavior(name):
     blackboard.set(name + '/min_z', 0.62)
     blackboard.set(name + '/max_z', 1.12)
 
+    para = py_trees.composites.Parallel(name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL, synchronize=True, allow_failure=True)
     act_tuck_arm = TuckWithCondBehavior('act_tuck_arm', 'tuck')
     act_move_head_down = HeadMoveJointBehavior('head_move_joint_down', pan=0, tilt=0.906)
     act_detect_item = ObjectDetectorBehavior('act_detect_item', bounding_box_bb_key=name+'/bb')
@@ -162,14 +164,17 @@ def BuildPickObjBehavior(name):
     seq_root = py_trees.composites.Sequence(name=name)
 
     seq_root.add_children([
-      act_tuck_arm,
-      act_move_head_down,
+      para,
       act_detect_item,
       act_detect_centroid,
       act_grasploc,
       act_grasploc_pick,
       act_tuck3_arm
     ])
+
+    para.add_children([
+      act_tuck_arm,
+      act_move_head_down])
 
     return seq_root
 def BuildPickAnythingBehavior(name):
@@ -181,6 +186,7 @@ def BuildPickAnythingBehavior(name):
     blackboard.set(name + '/min_z', 0.62)
     blackboard.set(name + '/max_z', 1.12)
 
+    para = py_trees.composites.Parallel(name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL, synchronize=True, allow_failure=True)
     act_tuck_arm = TuckWithCondBehavior('act_tuck_arm', 'tuck')
     act_move_head_down = HeadMoveJointBehavior('head_move_joint_down', pan=0, tilt=0.906)
     act_detect_centroid = CentroidDetectorBehavior(name)
@@ -190,17 +196,24 @@ def BuildPickAnythingBehavior(name):
     seq_root = py_trees.composites.Sequence(name=name)
 
     seq_root.add_children([
-      act_tuck_arm,
-      act_move_head_down,
+      para,
       act_detect_centroid,
       act_grasploc,
       act_grasploc_pick,
       act_tuck3_arm
     ])
 
+    para.add_children([
+      act_tuck_arm,
+      act_move_head_down])
+
     return seq_root
 def BuildOpenGripperBehavior(name):
-    return ControlGripperBehavior(name, 1.0)
+    para = py_trees.composites.Parallel(name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL, synchronize=True, allow_failure=True)
+    tts = TTSBehavior(name, 'I can not use the duster in this orientation')
+    drop = ControlGripperBehavior(name, 1.0)
+    para.add_children([drop, tts])
+    return para
 def BuildCloseGripperBehavior(name):
     return ControlGripperBehavior(name, 0.0)
 def BuildGetFeatherDusterOrientation(name):
@@ -213,3 +226,16 @@ def BuildGetFeatherDusterOrientation(name):
     return seq
 def BuildGetMFCDusterOrientation(name):
     return GetMFCDusterOrientation(name)
+def BuildDustBehavior(name, duster_type):
+    para = py_trees.composites.Parallel(name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL, synchronize=True, allow_failure=True)
+    tts = TTSBehavior(name, 'I love to dust hmm hmm hmmm la la la')
+    dust = DustingBehavior(name, duster_type=duster_type)
+    para.add_children([dust, tts])
+    return para
+def BuildCheckObjBehavior(name):
+    seq = py_trees.composites.Sequence(name)
+    act_look_at_duster = HeadMoveJointBehavior(name, pan=0, tilt=0.195)
+    seq.add_children([
+      act_look_at_duster,
+      LoadAndExecuteTrajectoryBehavior(name, traj_name='LfdCheckObj')])
+    return seq

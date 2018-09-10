@@ -128,6 +128,9 @@ class LfD:
           Action('set_target_mfc_top', BuildSetObjDetectorTarget, 'mfc_top'),
           Action('set_target_mfc_bottom', BuildSetObjDetectorTarget, 'mfc_bottom'),
           Action('place', BuildPlaceBehavior),
+          Action('feather_dust', BuildDustBehavior, 'feather'),
+          Action('mfc_dust', BuildDustBehavior, 'mfc'),
+          Action('check_duster', BuildCheckObjBehavior),
           Action('look_strait', BuildHeadMoveBehavior),
           Action('look_at_person', BuildLookAtPersonBehavior),
           Action('relative forward', BuildRelativeMoveBehavior, amp=0.5, direction='forward'),
@@ -191,7 +194,7 @@ class LfD:
 
         # Features setup
         self.feature_names = (
-              ['person_detected', 'centroid_detected', 'hand_detected', 'hand_y', 'item', 'duster_orientation']
+              ['person_detected', 'centroid_detected', 'hand_detected', 'hand_y', 'target_item', 'duster_orientation']
               # TODO(Kevin): Develop a way to allow indices of last actions to be different for different models
             + ['LA' + str(num_last_actions - i) for i in xrange(self.last_actions.maxlen)]
             + [name + "_position" for name in self.joint_names]
@@ -222,9 +225,9 @@ class LfD:
         at_item1 = BuildAtPoseBehavior(name='at_item1', param_server_name='/swag_delivery/pose_item1')
         at_item2 = BuildAtPoseBehavior(name='at_item2', param_server_name='/swag_delivery/pose_item2')
         at_item3 = BuildAtPoseBehavior(name='at_item3', param_server_name='/swag_delivery/pose_item3')
-        at_item1 = BuildAtPoseBehavior(name='at_item4', param_server_name='/swag_delivery/pose_item4')
-        at_item2 = BuildAtPoseBehavior(name='at_item5', param_server_name='/swag_delivery/pose_item5')
-        at_item3 = BuildAtPoseBehavior(name='at_item6', param_server_name='/swag_delivery/pose_item6')
+        at_item4 = BuildAtPoseBehavior(name='at_item4', param_server_name='/swag_delivery/pose_item4')
+        at_item5 = BuildAtPoseBehavior(name='at_item5', param_server_name='/swag_delivery/pose_item5')
+        at_item6 = BuildAtPoseBehavior(name='at_item6', param_server_name='/swag_delivery/pose_item6')
         arm_tucked = BuildArmTuckedBehavior(name='arm_tucked', tuck_pose='tuck')
         arm_2ed = BuildArmTuckedBehavior(name='arm_2ed', tuck_pose=2)
         arm_unknown_3ed = BuildArmTuckedBehavior(name='arm_unknown_3ed', tuck_pose='unknown_3')
@@ -241,6 +244,9 @@ class LfD:
             at_item1,
             at_item2,
             at_item3,
+            at_item4,
+            at_item5,
+            at_item6,
             arm_tucked,
             arm_2ed,
             arm_unknown_3ed,
