@@ -153,6 +153,9 @@ def BuildPickObjBehavior(name):
     blackboard.set(name + '/min_z', 0.62)
     blackboard.set(name + '/max_z', 1.12)
 
+    sel = py_trees.composites.Selector(name)
+    act_say_fail = TTSFormatedBehavior('I could not pick up the {0}', {0: 'item'})
+    act_say_starting = TTSFormatedBehavior('I will pick up the {0}', {0: 'item'})
     para = py_trees.composites.Parallel(name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL, synchronize=True, allow_failure=True)
     act_tuck_arm = TuckWithCondBehavior('act_tuck_arm', 'tuck')
     act_move_head_down = HeadMoveJointBehavior('head_move_joint_down', pan=0, tilt=0.906)
@@ -163,6 +166,7 @@ def BuildPickObjBehavior(name):
     act_tuck3_arm = TuckWithCondBehavior(name, 'unknown_3')
     seq_root = py_trees.composites.Sequence(name=name)
 
+    sel.add_children([seq_root, act_say_fail])
     seq_root.add_children([
       para,
       act_detect_item,
@@ -174,9 +178,10 @@ def BuildPickObjBehavior(name):
 
     para.add_children([
       act_tuck_arm,
-      act_move_head_down])
+      act_move_head_down,
+      act_say_starting])
 
-    return seq_root
+    return sel
 def BuildPickAnythingBehavior(name):
     blackboard = py_trees.blackboard.Blackboard()
     blackboard.set(name + '/min_x', 0.0)
@@ -186,6 +191,9 @@ def BuildPickAnythingBehavior(name):
     blackboard.set(name + '/min_z', 0.62)
     blackboard.set(name + '/max_z', 1.12)
 
+    sel = py_trees.composites.Selector(name)
+    act_say_fail = TTSFormatedBehavior('I could not pick up the {0}', {0: 'item'})
+    act_say_starting = TTSFormatedBehavior('I will pick up the {0}', {0: 'item'})
     para = py_trees.composites.Parallel(name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL, synchronize=True, allow_failure=True)
     act_tuck_arm = TuckWithCondBehavior('act_tuck_arm', 'tuck')
     act_move_head_down = HeadMoveJointBehavior('head_move_joint_down', pan=0, tilt=0.906)
@@ -195,6 +203,7 @@ def BuildPickAnythingBehavior(name):
     act_tuck3_arm = TuckWithCondBehavior(name, 'unknown_3')
     seq_root = py_trees.composites.Sequence(name=name)
 
+    sel.add_children([seq_root, act_say_fail])
     seq_root.add_children([
       para,
       act_detect_centroid,
@@ -205,9 +214,10 @@ def BuildPickAnythingBehavior(name):
 
     para.add_children([
       act_tuck_arm,
-      act_move_head_down])
+      act_move_head_down,
+      act_say_starting])
 
-    return seq_root
+    return sel
 def BuildOpenGripperBehavior(name):
     para = py_trees.composites.Parallel(name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL, synchronize=True, allow_failure=True)
     tts = TTSBehavior(name, 'I can not use the duster in this orientation')
@@ -217,18 +227,25 @@ def BuildOpenGripperBehavior(name):
 def BuildCloseGripperBehavior(name):
     return ControlGripperBehavior(name, 0.0)
 def BuildGetFeatherDusterOrientation(name):
+    para = py_trees.composites.Parallel(name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL, synchronize=True, allow_failure=True)
+    tts = TTSBehavior(name, 'I am checking the orientation of the duster')
     seq = py_trees.composites.Sequence(name)
     seq.add_children([
       py_trees.blackboard.SetBlackboardVariable(name=name, variable_name='item', variable_value='feather'),
       ObjectDetectorBehavior('act_detect_item'),
       GetFeatherDusterOrientation(name),
     ])
-    return seq
+    para.add_children([tts, seq])
+    return para
 def BuildGetMFCDusterOrientation(name):
-    return GetMFCDusterOrientation(name)
+    para = py_trees.composites.Parallel(name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL, synchronize=True, allow_failure=True)
+    tts = TTSBehavior(name, 'I am checking the orientation of the duster')
+    check = GetMFCDusterOrientation(name)
+    para.add_children([tts, check])
+    return para
 def BuildDustBehavior(name, duster_type):
     para = py_trees.composites.Parallel(name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL, synchronize=True, allow_failure=True)
-    tts = TTSBehavior(name, 'I love to dust hmm hmm hmmm la la la')
+    tts = TTSBehavior(name, 'Dusting is the best. I love to dust so much. I am a happy robot')
     dust = DustingBehavior(name, duster_type=duster_type)
     para.add_children([dust, tts])
     return para
