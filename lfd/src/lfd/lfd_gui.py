@@ -248,15 +248,28 @@ class LfDGui(QtGui.QMainWindow):
 			self.redo_states = self.redo_states[:-1]
 			self.redo_actions = self.redo_actions[:-1]
 			# self.redo_last_actions = self.redo_last_actions[:-1]
+			QtGui.QMessageBox.information(self, 'Success', 'Success in redoing the action!')
 		else:
-			print("No undone demonstartion to redo.")
-		QtGui.QMessageBox.information(self, 'Success', 'Success in redoing the action!')
+			print("No undone demonstration to redo.")
+			QtGui.QMessageBox.information(self, 'Failure', 'No undone demonstration to redo!')
 
 	def undo_cb(self):
 		if self.lfd.demo_states is not None and len(self.lfd.demo_states) != 0:
+			if self.lfd.redo_states is not None and len(self.lfd.redo_states) != 0:
+				self.lfd.redo_states = numpy.append(self.lfd.redo_states, [self.lfd.demo_states[-1]], axis=0)
+				self.lfd.redo_actions = numpy.append(self.lfd.redo_actions, [self.lfd.demo_actions[-1]])
+				# self.redo_last_actions = numpy.append(self.redo_last_actions, [self.last_actions[-1]])
+			else:
+				self.lfd.redo_states = [self.lfd.demo_states[-1]]
+				self.lfd.redo_actions = [self.lfd.demo_actions[-1]]
+				# self.redo_last_actions = [self.last_actions[-1]]
 			self.lfd.demo_states = self.lfd.demo_states[:-1]
 			self.lfd.demo_actions = self.lfd.demo_actions[:-1]
-		QtGui.QMessageBox.information(self, 'Success', 'Success in undoing the action!')
+			# self.last_actions.pop()
+			QtGui.QMessageBox.information(self, 'Success', 'Success in undoing the action!')
+		else:
+			print "No demonstration to undo."
+			QtGui.QMessageBox.information(self, 'Failure', 'Nothing to undo!')
 
 
 	def writemodel_cb(self):
