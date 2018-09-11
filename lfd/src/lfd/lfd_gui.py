@@ -108,6 +108,11 @@ class LfDGui(QtGui.QMainWindow):
 		else:
 			self.button_cb = None
 
+		if self.button_cb == self.demonstrate_cb:
+			self.action_interface_layout.meau_label.setText("Demonstrate - " + "Actions:")
+		elif self.button_cb == self.rc_cb:
+			self.action_interface_layout.menu_label.setText("Rc - " + "Actions:")
+
 		# Action buttons
 		for key, name in self.lfd.action_names.iteritems():
 			button = QtGui.QPushButton(name)
