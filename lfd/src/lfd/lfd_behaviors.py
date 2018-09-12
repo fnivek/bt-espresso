@@ -26,7 +26,7 @@ class GetFeatherDusterOrientation(py_trees.behaviour.Behaviour):
         # Check if the center x is on the right or left
         avg_y = (max_y + min_y) / 2.0
         print 'avg_y', avg_y
-        y_value_divider = 0 # TODO(Kevin/Allen): get actual value
+        y_value_divider = 250.0
         if avg_y > y_value_divider:
             blackboard.set(self._duster_orientation_bb_key, 0) # bottom
             print 'Feather bottom'

@@ -150,6 +150,7 @@ class LfD:
           Action('sleep', BuildSleepBehavior),
           Action('open_gripper', BuildOpenGripperBehavior),
           Action('close_gripper', BuildCloseGripperBehavior),
+          Action('place_duster', BuildPlaceDusterBehavior),
           # Action('detect handle', BuildBagDetectBehavior),
           # Action('grab handle', BuildBagGrabBehavior),
           # Action('grasploc', BuildGrasplocBehavior),

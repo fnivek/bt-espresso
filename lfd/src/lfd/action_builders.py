@@ -9,7 +9,7 @@ from centroid_detector_msgs.msg import DetectCentroidGoal, DetectCentroidAction
 from behavior_manager.interfaces.manipulation_behavior_new import FullyExtendTorso, MoveTorsoBehavior, PickBehavior, TuckWithCondBehavior, PlaceBehavior, GrasplocPickBehavior, HeadMoveJointBehavior, HeadMoveBehavior, DustingBehavior
 from behavior_manager.conditions.arm_tucked_condition import ArmTuckedCondition
 from behavior_manager.interfaces.centroid_detector_behavior import CentroidDetectorBehavior
-from behavior_manager.interfaces.tts_behavior import TTSBehavior
+from behavior_manager.interfaces.tts_behavior import TTSBehavior, TTSFormatedBehavior
 from behavior_manager.interfaces.update_joints_behavior import JointToBlackboardBehavior
 from behavior_manager.interfaces.navigation_behavior import *
 from behavior_manager.conditions.at_pose_condition import AtPoseCondition
@@ -154,15 +154,15 @@ def BuildPickObjBehavior(name):
     blackboard.set(name + '/max_z', 1.12)
 
     sel = py_trees.composites.Selector(name)
-    act_say_fail = TTSFormatedBehavior('I could not pick up the {0}', {0: 'item'})
-    act_say_starting = TTSFormatedBehavior('I will pick up the {0}', {0: 'item'})
+    act_say_fail = TTSFormatedBehavior(name, 'I could not pick up the {0}', {0: 'item'})
+    act_say_starting = TTSFormatedBehavior(name, 'I will pick up the {0}', {0: 'item'})
     para = py_trees.composites.Parallel(name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL, synchronize=True, allow_failure=True)
     act_tuck_arm = TuckWithCondBehavior('act_tuck_arm', 'tuck')
     act_move_head_down = HeadMoveJointBehavior('head_move_joint_down', pan=0, tilt=0.906)
     act_detect_item = ObjectDetectorBehavior('act_detect_item', bounding_box_bb_key=name+'/bb')
     act_detect_centroid = CentroidDetectorBehavior(name, bounding_box_bb_key=name+'/bb')
     act_grasploc = GrasplocBehavior('grasploc', 'centroid')
-    act_grasploc_pick = GrasplocPickBehavior(name='grasplocPick')
+    act_grasploc_pick = GrasplocPickBehavior(name='grasplocPick')# , filter_off=True)
     act_tuck3_arm = TuckWithCondBehavior(name, 'unknown_3')
     seq_root = py_trees.composites.Sequence(name=name)
 
@@ -192,14 +192,14 @@ def BuildPickAnythingBehavior(name):
     blackboard.set(name + '/max_z', 1.12)
 
     sel = py_trees.composites.Selector(name)
-    act_say_fail = TTSFormatedBehavior('I could not pick up the {0}', {0: 'item'})
-    act_say_starting = TTSFormatedBehavior('I will pick up the {0}', {0: 'item'})
+    act_say_fail = TTSFormatedBehavior(name, 'I could not pick up the {0}', {0: 'item'})
+    act_say_starting = TTSFormatedBehavior(name, 'I will pick up the {0}', {0: 'item'})
     para = py_trees.composites.Parallel(name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL, synchronize=True, allow_failure=True)
     act_tuck_arm = TuckWithCondBehavior('act_tuck_arm', 'tuck')
     act_move_head_down = HeadMoveJointBehavior('head_move_joint_down', pan=0, tilt=0.906)
     act_detect_centroid = CentroidDetectorBehavior(name)
     act_grasploc = GrasplocBehavior('grasploc', 'centroid')
-    act_grasploc_pick = GrasplocPickBehavior(name='grasplocPick') #, filter_off=True)
+    act_grasploc_pick = GrasplocPickBehavior(name='grasplocPick')# , filter_off=True)
     act_tuck3_arm = TuckWithCondBehavior(name, 'unknown_3')
     seq_root = py_trees.composites.Sequence(name=name)
 
@@ -255,4 +255,10 @@ def BuildCheckObjBehavior(name):
     seq.add_children([
       act_look_at_duster,
       LoadAndExecuteTrajectoryBehavior(name, traj_name='LfdCheckObj')])
+    return seq
+def BuildPlaceDusterBehavior(name):
+    seq = py_trees.composites.Sequence(name)
+    seq.add_children([
+      LoadAndExecuteTrajectoryBehavior(name, traj_name='LfdPlaceWrongItem'),
+      ControlGripperBehavior(name, 1.0)])
     return seq
