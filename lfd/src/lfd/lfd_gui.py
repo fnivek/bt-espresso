@@ -109,7 +109,7 @@ class LfDGui(QtGui.QMainWindow):
 			self.button_cb = None
 
 		if self.button_cb == self.demonstrate_cb:
-			self.action_interface_layout.meau_label.setText("Demonstrate - " + "Actions:")
+			self.action_interface_layout.menu_label.setText("Demonstrate - " + "Actions:")
 		elif self.button_cb == self.rc_cb:
 			self.action_interface_layout.menu_label.setText("Rc - " + "Actions:")
 
