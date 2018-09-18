@@ -5,6 +5,8 @@ from std_msgs.msg import String
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Pose
 
+from copy import copy
+
 from centroid_detector_msgs.msg import DetectCentroidGoal, DetectCentroidAction
 from behavior_manager.interfaces.manipulation_behavior_new import FullyExtendTorso, MoveTorsoBehavior, PickBehavior, TuckWithCondBehavior, PlaceBehavior, GrasplocPickBehavior, HeadMoveJointBehavior, HeadMoveBehavior, DustingBehavior
 from behavior_manager.conditions.arm_tucked_condition import ArmTuckedCondition
@@ -20,7 +22,7 @@ from behavior_manager.interfaces.sleep_behavior import SleepBehavior
 from behavior_manager.interfaces.object_detector_behavior import ObjectDetectorBehavior
 # TODO(Someone): Figure out how to actually import the module
 from lfd_behaviors import GetFeatherDusterOrientation, GetMFCDusterOrientation
-from behavior_manager.interfaces.fetch_manipulation_behavior import ControlGripperBehavior, LoadAndExecuteTrajectoryBehavior, AddBoxBehavior, RemoveCollisionObjBehavior
+from behavior_manager.interfaces.fetch_manipulation_behavior import ControlGripperBehavior, LoadAndExecuteTrajectoryBehavior, AddBoxBehavior, RemoveCollisionObjBehavior, CartesianBehavior
 
 class Action:
     def __init__(self, name, builder, *builder_args, **builder_kwargs):
@@ -50,11 +52,11 @@ def BuildFullyExtendTorso(name):
 def BuildMoveTorsoBehavior(name):
     return MoveTorsoBehavior(name, 0.2)
 def BuildPickBehavior(name):
-    blackboard = py_trees.blackboard.Blackboard()
-    blackboard.set('shelf', String('shelf2'))
+    set_shelf_2 = py_trees.blackboard.SetBlackboardVariable(name=name, variable_name='shelf', variable_value=String('shelf2'))
     seq = py_trees.composites.Sequence(name)
     seq.add_children([
       TuckWithCondBehavior(name, 'tuck'),
+      set_shelf_2,
       PickBehavior(name, centroid_bb_key='detect_centroid')])
     return seq
 def BuildCentroidDetectorBehavior(name):
@@ -161,8 +163,10 @@ def BuildPickObjBehavior(name):
     act_move_head_down = HeadMoveJointBehavior('head_move_joint_down', pan=0, tilt=0.906)
     act_detect_item = ObjectDetectorBehavior('act_detect_item', bounding_box_bb_key=name+'/bb')
     act_detect_centroid = CentroidDetectorBehavior(name, bounding_box_bb_key=name+'/bb')
+    # set_shelf_4 = py_trees.blackboard.SetBlackboardVariable(name=name, variable_name='shelf', variable_value=String('4'))
     act_grasploc = GrasplocBehavior('grasploc', 'centroid')
     act_grasploc_pick = GrasplocPickBehavior(name='grasplocPick')# , filter_off=True)
+    # act_pick = PickBehavior(name)
     act_tuck3_arm = TuckWithCondBehavior(name, 'unknown_3')
     seq_root = py_trees.composites.Sequence(name=name)
 
@@ -170,7 +174,9 @@ def BuildPickObjBehavior(name):
     seq_root.add_children([
       para,
       act_detect_item,
+      # set_shelf_4,
       act_detect_centroid,
+      # act_pick,
       act_grasploc,
       act_grasploc_pick,
       act_tuck3_arm
@@ -244,11 +250,15 @@ def BuildGetMFCDusterOrientation(name):
     para.add_children([tts, check])
     return para
 def BuildDustBehavior(name, duster_type):
+    seq = py_trees.composites.Sequence(name)
+    act_move_head_down = HeadMoveJointBehavior('head_move_joint_down', pan=0, tilt=0.906)
+    tuck = TuckWithCondBehavior(name, 'unknown_3')
     para = py_trees.composites.Parallel(name, policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL, synchronize=True, allow_failure=True)
     tts = TTSBehavior(name, 'Dusting is the best. I love to dust so much. I am a happy robot')
     dust = DustingBehavior(name, duster_type=duster_type)
-    para.add_children([dust, tts])
-    return para
+    seq.add_children([tuck, para])
+    para.add_children([dust, tts, act_move_head_down])
+    return seq
 def BuildCheckObjBehavior(name):
     seq = py_trees.composites.Sequence(name)
     act_look_at_duster = HeadMoveJointBehavior(name, pan=0, tilt=0.195)
@@ -257,8 +267,32 @@ def BuildCheckObjBehavior(name):
       LoadAndExecuteTrajectoryBehavior(name, traj_name='LfdCheckObj')])
     return seq
 def BuildPlaceDusterBehavior(name):
+    start_pose = Pose()
+    start_pose.position.x = 0.43815
+    start_pose.position.y = 0.12209
+    start_pose.position.z = 0.77039
+    start_pose.orientation.x = 0.65031
+    start_pose.orientation.y = -0.032722
+    start_pose.orientation.z = -0.22372
+    start_pose.orientation.w = 0.72524
+    up_pose = copy(start_pose)
+    up_pose.position.z += 0.1
+    back_pose = copy(up_pose)
+    back_pose.position.x -= 0.1
+    side_pose = copy(back_pose)
+    side_pose.position.y += 0.1
+    # tilt_pose = copy(back_pose)
+    # tilt_pose.orientation.x = 0.261
+    # tilt_pose.orientation.y = -0.164
+    # tilt_pose.orientation.z = -0.263
+    # tilt_pose.orientation.w = 0.914
+    act_move_head_down = HeadMoveJointBehavior('head_move_joint_down', pan=0, tilt=0.906)
+    cart = CartesianBehavior(name='act_cartesian_place', action_name='move', wplist=[up_pose, back_pose], max_try=3)
     seq = py_trees.composites.Sequence(name)
     seq.add_children([
+      act_move_head_down,
       LoadAndExecuteTrajectoryBehavior(name, traj_name='LfdPlaceWrongItem'),
-      ControlGripperBehavior(name, 1.0)])
+      ControlGripperBehavior(name, 1.0),
+      cart,
+      TuckWithCondBehavior(name, 'tuck')])
     return seq
