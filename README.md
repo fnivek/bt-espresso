@@ -12,8 +12,7 @@ BT-Espresso is an algorithm that allows a robot to learn a behavior tree by obse
 	author = {French, K. and Wu, S. and Pan, T. and Zhou, Z. and Jenkins, O. C.},
 	month = may,
 	year = {2019},
-	pages = {7791--7797},
-	file = {IEEE Xplore Abstract Record:/home/fnivek/Zotero/storage/Y37LSLNP/8794104.html:text/html;IEEE Xplore Full Text PDF:/home/fnivek/Zotero/storage/UZXUUM66/French et al. - 2019 - Learning Behavior Trees From Demonstration.pdf:application/pdf;IEEE Xplore Abstract Record:/home/fnivek/Zotero/storage/2QPCT2QP/8794104.html:text/html}
+	pages = {7791--7797}
 }
 ```
 
